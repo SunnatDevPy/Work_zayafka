@@ -1,0 +1,9 @@
+# Python 3.12+ tavsiya etiladi.
+aiogram>=3.13.0,<4
+sqlalchemy[asyncio]>=2.0.36,<3
+asyncpg>=0.30.0
+python-dotenv>=1.0.0
+reportlab>=4.2.0
+Pillow>=11.0.0
+aiofiles>=24.1.0
+openai>=1.30.0
