@@ -49,9 +49,9 @@ class ReviewState(StatesGroup):
 def _main_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text=USER_BTN_VIEW),  KeyboardButton(text=USER_BTN_APPLY)],
-            [KeyboardButton(text=USER_BTN_FAQ)],
+            [KeyboardButton(text=USER_BTN_VIEW),  KeyboardButton(text=USER_BTN_FAQ)],
             [KeyboardButton(text=USER_BTN_AI)],
+            [KeyboardButton(text=USER_BTN_APPLY)],
         ],
         resize_keyboard=True,
     )
