@@ -154,6 +154,7 @@ def vacancy_admin_list_kb(vacancies: list) -> InlineKeyboardMarkup:
         mark = "✅" if v.is_active else "⏸"
         b.row(InlineKeyboardButton(text=f"{mark} {v.title}", callback_data=f"admve:{v.id}"))
     b.row(InlineKeyboardButton(text="➕ Vakansiya qo'shish", callback_data="admva:add"))
+    b.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="admback:admin"))
     return b.as_markup()
 
 

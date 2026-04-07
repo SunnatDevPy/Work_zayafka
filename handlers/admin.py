@@ -75,6 +75,12 @@ async def _edit_or_answer(query: CallbackQuery, text: str, reply_markup=None) ->
         await query.message.answer(text, reply_markup=reply_markup)
 
 
+def _back_kb(callback_data: str):
+    b = InlineKeyboardBuilder()
+    b.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data=callback_data))
+    return b.as_markup()
+
+
 async def _vacancy_edit_text(vid: int) -> tuple[str, bool]:
     """Returns (text, is_active) for vacancy edit menu."""
     v = await Vacancy.get_or_none(vid)
@@ -123,7 +129,10 @@ async def adm_vac_list(query: CallbackQuery, state: FSMContext) -> None:
 async def adm_vac_add_start(query: CallbackQuery, state: FSMContext) -> None:
     await query.answer()
     await state.set_state(AdminVacancySG.title)
-    msg = await query.message.answer("✏️ Vakansiya nomini bitta xabar bilan yozing:")
+    msg = await query.message.answer(
+        "✏️ Vakansiya nomini bitta xabar bilan yozing:",
+        reply_markup=_back_kb("admback:vac_list"),
+    )
     await state.update_data(prompt_msg_id=msg.message_id)
 
 
@@ -177,7 +186,10 @@ async def adm_ve_title_start(query: CallbackQuery, state: FSMContext) -> None:
     except (ValueError, IndexError):
         return
     await state.set_state(AdminVacancyEditSG.title)
-    msg = await query.message.answer("✏️ Vakansiyaning yangi nomini yozing:")
+    msg = await query.message.answer(
+        "✏️ Vakansiyaning yangi nomini yozing:",
+        reply_markup=_back_kb(f"admback:vac_edit:{vid}"),
+    )
     await state.update_data(edit_vacancy_id=vid, prompt_msg_id=msg.message_id)
 
 
@@ -214,7 +226,8 @@ async def adm_ve_desc_start(query: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(AdminVacancyEditSG.description)
     msg = await query.message.answer(
         "📝 Yangi tavsifni yozing.\n"
-        "O'chirish uchun — belgisini yuboring."
+        "O'chirish uchun — belgisini yuboring.",
+        reply_markup=_back_kb(f"admback:vac_edit:{vid}"),
     )
     await state.update_data(edit_vacancy_id=vid, prompt_msg_id=msg.message_id)
 
@@ -360,7 +373,10 @@ async def adm_q_add_start(query: CallbackQuery, state: FSMContext) -> None:
     except (ValueError, IndexError):
         return
     await state.set_state(AdminQuestionSG.enter_text)
-    msg = await query.message.answer("✏️ Savol matnini bitta xabar bilan yozing:")
+    msg = await query.message.answer(
+        "✏️ Savol matnini bitta xabar bilan yozing:",
+        reply_markup=_back_kb(f"admback:q_list:{vid}"),
+    )
     await state.update_data(vacancy_id=vid, prompt_msg_id=msg.message_id)
 
 
@@ -456,7 +472,10 @@ async def adm_q_edit_text_start(query: CallbackQuery, state: FSMContext) -> None
     except (ValueError, IndexError):
         return
     await state.set_state(AdminQuestionSG.enter_text)
-    msg = await query.message.answer("✏️ Savolning yangi matnini yozing:")
+    msg = await query.message.answer(
+        "✏️ Savolning yangi matnini yozing:",
+        reply_markup=_back_kb(f"admback:q_edit:{qid}"),
+    )
     await state.update_data(edit_question_id=qid, prompt_msg_id=msg.message_id)
 
 
@@ -525,7 +544,10 @@ async def adm_faq_back(query: CallbackQuery, state: FSMContext) -> None:
 async def adm_faq_add_start(query: CallbackQuery, state: FSMContext) -> None:
     await query.answer()
     await state.set_state(AdminFaqSG.question)
-    msg = await query.message.answer("✏️ Savol matnini yozing (foydalanuvchiga ko'rinadigan):")
+    msg = await query.message.answer(
+        "✏️ Savol matnini yozing (foydalanuvchiga ko'rinadigan):",
+        reply_markup=_back_kb("admback:faq_list"),
+    )
     await state.update_data(prompt_msg_id=msg.message_id)
 
 
@@ -611,7 +633,10 @@ async def adm_faq_edit_q_start(query: CallbackQuery, state: FSMContext) -> None:
     except (ValueError, IndexError):
         return
     await state.set_state(AdminFaqSG.edit_question)
-    msg = await query.message.answer("✏️ Yangi savol matnini yozing:")
+    msg = await query.message.answer(
+        "✏️ Yangi savol matnini yozing:",
+        reply_markup=_back_kb(f"admback:faq_edit:{faq_id}"),
+    )
     await state.update_data(edit_faq_id=faq_id, prompt_msg_id=msg.message_id)
 
 
@@ -654,7 +679,10 @@ async def adm_faq_edit_a_start(query: CallbackQuery, state: FSMContext) -> None:
     except (ValueError, IndexError):
         return
     await state.set_state(AdminFaqSG.edit_answer)
-    msg = await query.message.answer("✏️ Yangi javobni yozing:")
+    msg = await query.message.answer(
+        "✏️ Yangi javobni yozing:",
+        reply_markup=_back_kb(f"admback:faq_edit:{faq_id}"),
+    )
     await state.update_data(edit_faq_id=faq_id, prompt_msg_id=msg.message_id)
 
 
@@ -738,7 +766,113 @@ async def adm_bc_start(query: CallbackQuery, state: FSMContext) -> None:
         query,
         f"📢 Keyingi xabaringiz <b>{n} ta</b> foydalanuvchiga yuboriladi.\n"
         f"Xabarni yuboring (matn, rasm, video …).",
+        reply_markup=_back_kb("admback:admin"),
     )
+
+
+@router.callback_query(F.data.startswith("admback:"), AdminFilter())
+async def admin_back(query: CallbackQuery, state: FSMContext) -> None:
+    await query.answer()
+    data = await state.get_data()
+    await _delete_msg(query.bot, query.message.chat.id, data.get("prompt_msg_id"))
+    await state.clear()
+
+    raw = query.data or ""
+    if raw == "admback:admin":
+        await _edit_or_answer(query, "🛠 <b>Admin panel</b>", admin_main_kb())
+        return
+    if raw == "admback:vac_list":
+        r = await db.execute(select(Vacancy).order_by(Vacancy.sort_order, Vacancy.id))
+        vacs = list(r.scalars().all())
+        text = "💼 <b>Vakansiyalar ro'yxati:</b>" if vacs else "📭 Vakansiyalar hozircha yo'q."
+        await _edit_or_answer(query, text, vacancy_admin_list_kb(vacs))
+        return
+    if raw.startswith("admback:vac_edit:"):
+        try:
+            vid = int(raw.split(":", 2)[2])
+        except (ValueError, IndexError):
+            await _edit_or_answer(query, "🛠 <b>Admin panel</b>", admin_main_kb())
+            return
+        text, is_active = await _vacancy_edit_text(vid)
+        await _edit_or_answer(query, text, vacancy_edit_kb(vid, is_active))
+        return
+    if raw.startswith("admback:q_list:"):
+        try:
+            vid = int(raw.split(":", 2)[2])
+        except (ValueError, IndexError):
+            await _edit_or_answer(query, "🛠 <b>Admin panel</b>", admin_main_kb())
+            return
+        v = await Vacancy.get_or_none(vid)
+        if not v:
+            await _edit_or_answer(query, "⚠️ Vakansiya topilmadi.", admin_main_kb())
+            return
+        r = await db.execute(
+            select(Question).where(Question.vacancy_id == vid).order_by(Question.sort_order, Question.id)
+        )
+        qs = list(r.scalars().all())
+        lines = [
+            f"{q.id}. [{q.sort_order}] {'📷' if q.require_photo else '📝'} {q.text[:80]}{'…' if len(q.text) > 80 else ''}"
+            for q in qs
+        ]
+        text = f"💼 <b>{v.title}</b>\n\n❓ Savollar:\n" + ("\n".join(lines) if lines else "— hozircha yo'q")
+        b = InlineKeyboardBuilder()
+        b.row(InlineKeyboardButton(text="➕ Savol qo'shish", callback_data=f"adqq:{vid}"))
+        for q in qs:
+            icon = "📷" if q.require_photo else "📝"
+            b.row(InlineKeyboardButton(text=f"{icon} #{q.id} — {q.text[:28]}", callback_data=f"adqe:{q.id}"))
+        b.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data=f"admve:{vid}"))
+        await _edit_or_answer(query, text, b.as_markup())
+        return
+    if raw.startswith("admback:q_edit:"):
+        try:
+            qid = int(raw.split(":", 2)[2])
+        except (ValueError, IndexError):
+            await _edit_or_answer(query, "🛠 <b>Admin panel</b>", admin_main_kb())
+            return
+        q = await Question.get_or_none(qid)
+        if not q:
+            await _edit_or_answer(query, "⚠️ Savol topilmadi.", admin_main_kb())
+            return
+        v = await Vacancy.get_or_none(q.vacancy_id)
+        b = InlineKeyboardBuilder()
+        b.row(InlineKeyboardButton(text="✏️ Matnni o'zgartirish",      callback_data=f"adqt:{qid}"))
+        b.row(InlineKeyboardButton(text="📷 Rasm talabini o'zgartirish", callback_data=f"adqf:{qid}"))
+        b.row(InlineKeyboardButton(text="🗑 O'chirish",                 callback_data=f"adqd:{qid}"))
+        b.row(InlineKeyboardButton(text="⬅️ Orqaga",                   callback_data=f"admq:{q.vacancy_id}"))
+        title = v.title if v else str(q.vacancy_id)
+        req_text = "ha" if q.require_photo else "yo'q"
+        await _edit_or_answer(
+            query,
+            f"💼 {title}\n\n❓ Savol:\n{q.text}\n\n📷 Rasm majburiy: {req_text}",
+            b.as_markup(),
+        )
+        return
+    if raw == "admback:faq_list":
+        r = await db.execute(select(Faq).order_by(Faq.sort_order, Faq.id))
+        faqs = list(r.scalars().all())
+        text = "📋 <b>FAQ ro'yxati:</b>" if faqs else "📭 FAQ hozircha yo'q. ➕ qo'shing."
+        await _edit_or_answer(query, text, admin_faq_list_kb(faqs))
+        return
+    if raw.startswith("admback:faq_edit:"):
+        try:
+            faq_id = int(raw.split(":", 2)[2])
+        except (ValueError, IndexError):
+            await _edit_or_answer(query, "🛠 <b>Admin panel</b>", admin_main_kb())
+            return
+        r = await db.execute(select(Faq).where(Faq.id == faq_id))
+        faq = r.scalar_one_or_none()
+        if not faq:
+            await _edit_or_answer(query, "⚠️ FAQ topilmadi.", admin_main_kb())
+            return
+        from html import escape as esc
+        text = (
+            f"📋 <b>FAQ #{faq.id}</b>\n\n"
+            f"❓ <b>Savol:</b>\n{esc(faq.question)}\n\n"
+            f"💬 <b>Javob:</b>\n{esc(faq.answer)}"
+        )
+        await _edit_or_answer(query, text, faq_edit_kb(faq_id))
+        return
+    await _edit_or_answer(query, "🛠 <b>Admin panel</b>", admin_main_kb())
 
 
 @router.message(BroadcastSG.waiting, AdminFilter())

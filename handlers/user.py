@@ -6,7 +6,13 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import BufferedInputFile, CallbackQuery, KeyboardButton, Message, ReplyKeyboardMarkup
+from aiogram.types import (
+    BufferedInputFile,
+    CallbackQuery,
+    KeyboardButton,
+    Message,
+    ReplyKeyboardMarkup,
+)
 from sqlalchemy import select
 
 from config import conf
@@ -30,6 +36,8 @@ USER_BTN_APPLY = "📋 Ariza qoldirish"
 USER_BTN_VIEW  = "🔍 Vakansiyalarni ko'rish"
 USER_BTN_AI    = "🤖 AI yordamchi"
 USER_BTN_FAQ   = "📋 Tez-tez so'raladigan savollar"
+SKIP_PHOTO_BTN = "⏭️ O'tkazib yuborish"
+STOP_APPLY_BTN = "⛔️ To'xtatish"
 
 
 class UserForm(StatesGroup):
@@ -94,15 +102,29 @@ async def _ask_current(target: Message | CallbackQuery, state: FSMContext) -> No
     q = questions[idx]
     n = len(questions)
     text = f"❓ <b>{idx + 1} / {n}</b>\n\n{q['text']}"
+    reply_markup = None
     if q["require_photo"]:
-        text += "\n\n📷 Rasm yuboring (izoh ixtiyoriy)."
+        text += "\n\n📷 Rasm yuboring (izoh ixtiyoriy) yoki «O'tkazib yuborish» ni bosing."
+        reply_markup = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text=SKIP_PHOTO_BTN)],
+                [KeyboardButton(text=STOP_APPLY_BTN)],
+            ],
+            resize_keyboard=True,
+            one_time_keyboard=True,
+        )
     else:
         text += "\n\n✍️ Javobni matn bilan yozing."
+        reply_markup = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text=STOP_APPLY_BTN)]],
+            resize_keyboard=True,
+            one_time_keyboard=True,
+        )
 
     if isinstance(target, Message):
-        await target.answer(text)
+        await target.answer(text, reply_markup=reply_markup)
     else:
-        await target.message.answer(text)
+        await target.message.answer(text, reply_markup=reply_markup)
 
 
 async def _finalize(bot, state: FSMContext, chat_id: int, from_user) -> None:
@@ -305,9 +327,12 @@ async def cb_vacancy_view(query: CallbackQuery, state: FSMContext) -> None:
 
     if raw == "vview:back":
         try:
-            await query.message.delete()
+            await query.message.edit_text(
+                "🏠 Asosiy menyuga qaytdingiz.\nKerakli bo'limni tanlang 👇"
+            )
         except TelegramBadRequest:
-            pass
+            await query.message.answer("🏠 Asosiy menyuga qaytdingiz.")
+        await query.message.answer(" ", reply_markup=_main_kb())
         return
 
     try:
@@ -410,7 +435,17 @@ async def answer_text(message: Message, state: FSMContext) -> None:
         await state.clear()
         return
     q = questions[idx]
+    if message.text == STOP_APPLY_BTN:
+        await state.clear()
+        await message.answer("🛑 Ariza topshirish to'xtatildi.", reply_markup=_main_kb())
+        return
     if q["require_photo"]:
+        if message.text == SKIP_PHOTO_BTN:
+            answers = data.get("answers") or []
+            answers.append({"question_id": q["id"], "text": None, "photo_path": None})
+            await state.update_data(idx=idx + 1, answers=answers)
+            await _ask_current(message, state)
+            return
         await message.answer("📷 Bu savol uchun rasm yuborishingiz kerak (izoh ixtiyoriy).")
         return
     answers = data.get("answers") or []
@@ -454,7 +489,7 @@ async def answer_invalid(message: Message, state: FSMContext) -> None:
         return
     q = questions[idx]
     if q["require_photo"]:
-        await message.answer("📷 Rasm yuboring (izoh bilan ham bo'lishi mumkin).")
+        await message.answer("📷 Rasm yuboring yoki «⏭️ O'tkazib yuborish» tugmasini bosing.")
     else:
         await message.answer("✍️ Matnli javob yuboring.")
 
