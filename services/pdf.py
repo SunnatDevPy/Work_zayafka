@@ -28,17 +28,17 @@ logger = logging.getLogger(__name__)
 _MAX_IMG_BYTES = 8 * 1024 * 1024
 _MAX_IMG_DIM   = 2400
 
-# ──────────────── Color palette ────────────────
-_C_PRIMARY  = colors.HexColor("#1a365d")   # deep navy
-_C_ACCENT   = colors.HexColor("#2b6cb0")   # blue
-_C_ACCENT2  = colors.HexColor("#3182ce")   # lighter blue
-_C_BG       = colors.HexColor("#f7fafc")   # very light grey
-_C_BG_CARD  = colors.HexColor("#ffffff")   # white card
-_C_BORDER   = colors.HexColor("#e2e8f0")
-_C_TEXT     = colors.HexColor("#2d3748")   # dark grey text
-_C_MUTED    = colors.HexColor("#718096")
-_C_NUM_BG   = colors.HexColor("#ebf8ff")   # light blue badge bg
-_C_HEADER   = colors.HexColor("#1e3a5f")
+# ── Palette ──────────────────────────────────────────────────────────
+_NAVY      = colors.HexColor("#1a2f4e")
+_BLUE      = colors.HexColor("#2563eb")
+_BLUE_SOFT = colors.HexColor("#3b82f6")
+_BLUE_PALE = colors.HexColor("#eff6ff")
+_BLUE_LINE = colors.HexColor("#bfdbfe")
+_TEXT      = colors.HexColor("#1e293b")
+_MUTED     = colors.HexColor("#64748b")
+_BORDER    = colors.HexColor("#e2e8f0")
+_WHITE     = colors.white
+_GREY_BG   = colors.HexColor("#f8fafc")
 
 
 def _prepare_image(path: str) -> str | None:
@@ -58,45 +58,46 @@ def _prepare_image(path: str) -> str | None:
 
 
 def _fonts() -> tuple[str, str]:
-    regular = bold = None
-    candidates: list[tuple[Path, str, str]] = []
+    candidates: list[tuple[Path, str, Path]] = []
     if platform.system() == "Windows":
         d = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
         candidates = [
-            (d / "arial.ttf",   "AppFont",     d / "arialbd.ttf"),
-            (d / "Arial.ttf",   "AppFont",     d / "Arialbd.ttf"),
+            (d / "arial.ttf",  "AppFont", d / "arialbd.ttf"),
+            (d / "Arial.ttf",  "AppFont", d / "Arialbd.ttf"),
         ]
     else:
         candidates = [
-            (Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),      "AppFont",
+            (Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+             "AppFont",
              Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")),
-            (Path("/usr/share/fonts/TTF/DejaVuSans.ttf"),                  "AppFont",
+            (Path("/usr/share/fonts/TTF/DejaVuSans.ttf"),
+             "AppFont",
              Path("/usr/share/fonts/TTF/DejaVuSans-Bold.ttf")),
         ]
     for reg_path, name, bold_path in candidates:
         if reg_path.is_file():
             pdfmetrics.registerFont(TTFont(name, str(reg_path)))
-            regular = name
             if Path(str(bold_path)).is_file():
                 pdfmetrics.registerFont(TTFont(name + "Bold", str(bold_path)))
-                bold = name + "Bold"
-                pdfmetrics.registerFontFamily(name, normal=name, bold=name + "Bold",
-                                              italic=name, boldItalic=name + "Bold")
-            else:
-                bold = name
-            break
-    return regular or "Helvetica", bold or "Helvetica-Bold"
+                pdfmetrics.registerFontFamily(
+                    name, normal=name, bold=name + "Bold",
+                    italic=name, boldItalic=name + "Bold",
+                )
+                return name, name + "Bold"
+            return name, name
+    return "Helvetica", "Helvetica-Bold"
 
 
-def _p(text: str, font: str, size: int, color=None, align=TA_LEFT, leading=None) -> Paragraph:
+def _p(text: str, font: str, size: float, color=None,
+       align=TA_LEFT, leading: float | None = None) -> Paragraph:
     return Paragraph(
         text,
         ParagraphStyle(
-            "p",
+            "x",
             fontName=font,
             fontSize=size,
-            leading=leading or size + 4,
-            textColor=color or _C_TEXT,
+            leading=leading or (size * 1.35),
+            textColor=color or _TEXT,
             alignment=align,
             spaceAfter=0,
             spaceBefore=0,
@@ -104,79 +105,81 @@ def _p(text: str, font: str, size: int, color=None, align=TA_LEFT, leading=None)
     )
 
 
-# ──────────────── Header block ────────────────
+# ── Header ───────────────────────────────────────────────────────────
 
-def _header_block(vacancy_title: str, applicant_label: str, font: str, bold: str, content_width: float) -> Table:
+def _header_block(vacancy_title: str, applicant_label: str,
+                  font: str, bold: str, content_width: float) -> Table:
     date_str = datetime.now().strftime("%d.%m.%Y")
 
-    title_row = Table(
+    top_row = Table(
         [[
-            _p(f"<b>{escape(vacancy_title)}</b>", bold, 20, _C_BG, TA_LEFT, leading=24),
-            _p(date_str, font, 9, colors.HexColor("#a0c4e8"), TA_RIGHT, leading=13),
+            _p(f"<b>{escape(vacancy_title)}</b>", bold, 16, _WHITE, TA_LEFT, leading=20),
+            _p(date_str, font, 8, colors.HexColor("#93c5fd"), TA_RIGHT, leading=12),
         ]],
-        colWidths=[content_width * 0.78, content_width * 0.22],
+        colWidths=[content_width * 0.80, content_width * 0.20],
     )
-    title_row.setStyle(TableStyle([
-        ("VALIGN",       (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING",  (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING",   (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING",(0, 0), (-1, -1), 0),
+    top_row.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+        ("TOPPADDING",    (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
     ]))
 
-    sub = _p(escape(applicant_label), font, 10, colors.HexColor("#cfe8f7"), TA_LEFT, leading=14)
+    sub = _p(escape(applicant_label), font, 8,
+             colors.HexColor("#bfdbfe"), TA_LEFT, leading=11)
 
     inner = Table(
-        [[title_row], [Spacer(1, 0.25 * cm)], [sub]],
+        [[top_row], [Spacer(1, 0.15 * cm)], [sub]],
         colWidths=[content_width],
     )
     inner.setStyle(TableStyle([
-        ("BACKGROUND",   (0, 0), (-1, -1), _C_HEADER),
-        ("LEFTPADDING",  (0, 0), (-1, -1), 18),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 18),
-        ("TOPPADDING",   (0, 0), (-1, -1), 16),
-        ("BOTTOMPADDING",(0, 0), (-1, -1), 16),
-        ("LINEBELOW",    (0, -1), (-1, -1), 4, _C_ACCENT2),
+        ("BACKGROUND",    (0, 0), (-1, -1), _NAVY),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 14),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 14),
+        ("TOPPADDING",    (0, 0), (-1, -1), 12),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+        ("LINEBELOW",     (0, -1), (-1, -1), 3, _BLUE_SOFT),
     ]))
     return inner
 
 
-# ──────────────── Photo block ────────────────
+# ── Photo block ──────────────────────────────────────────────────────
 
-def _photo_block(image_path: str | None, font: str, content_width: float) -> list:
-    inner_w = max(content_width - 24, 6 * cm)
-
+def _photo_block(image_path: str | None, font: str, inner_width: float) -> list:
     if image_path and os.path.isfile(image_path):
         usable = _prepare_image(image_path)
         if usable:
             try:
-                img = RLImage(usable, width=min(inner_w, 13 * cm))
-                t = Table([[img]], colWidths=[content_width - 24])
+                max_w = min(inner_width, 10 * cm)
+                img = RLImage(usable, width=max_w)
+                t = Table([[img]], colWidths=[inner_width])
                 t.setStyle(TableStyle([
-                    ("ALIGN",        (0, 0), (-1, -1), "CENTER"),
-                    ("BACKGROUND",   (0, 0), (-1, -1), colors.white),
-                    ("BOX",          (0, 0), (-1, -1), 0.5, _C_BORDER),
-                    ("LEFTPADDING",  (0, 0), (-1, -1), 6),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                    ("TOPPADDING",   (0, 0), (-1, -1), 6),
-                    ("BOTTOMPADDING",(0, 0), (-1, -1), 6),
+                    ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
+                    ("BACKGROUND",    (0, 0), (-1, -1), _WHITE),
+                    ("BOX",           (0, 0), (-1, -1), 0.5, _BORDER),
+                    ("LEFTPADDING",   (0, 0), (-1, -1), 4),
+                    ("RIGHTPADDING",  (0, 0), (-1, -1), 4),
+                    ("TOPPADDING",    (0, 0), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
                 ]))
                 return [t]
             except Exception as exc:
                 logger.warning("PDF rasm yuklashda xato: %s", exc)
 
-    # Placeholder
-    ph = _p("[ Rasm yuborilmadi ]", font, 10, _C_MUTED, TA_CENTER, leading=13)
-    t = Table([[Spacer(1, 0.3 * cm)], [ph], [Spacer(1, 0.3 * cm)]], colWidths=[content_width - 24])
+    ph = _p("[ rasm yuborilmadi ]", font, 8, _MUTED, TA_CENTER)
+    t = Table([[ph]], colWidths=[inner_width])
     t.setStyle(TableStyle([
-        ("ALIGN",       (0, 0), (-1, -1), "CENTER"),
-        ("BACKGROUND",  (0, 0), (-1, -1), _C_BG),
-        ("BOX",         (0, 0), (-1, -1), 0.5, _C_BORDER),
+        ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
+        ("BACKGROUND",    (0, 0), (-1, -1), _GREY_BG),
+        ("BOX",           (0, 0), (-1, -1), 0.4, _BORDER),
+        ("TOPPADDING",    (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
     ]))
     return [t]
 
 
-# ──────────────── Question card ────────────────
+# ── Question card ────────────────────────────────────────────────────
 
 def _question_card(
     index: int,
@@ -188,96 +191,95 @@ def _question_card(
     bold: str,
     content_width: float,
 ) -> Table:
+    inner_w = content_width - 22   # card left padding (10) + accent bar (4) + right (8)
+    ans_w   = inner_w - 16         # answer box inner padding
 
-    # ── Number badge + question text ──
-    num_cell  = _p(f"<b>{index}</b>", bold, 13, _C_ACCENT, TA_CENTER, leading=17)
-    q_cell    = _p(escape(question), font, 11, _C_TEXT, TA_LEFT, leading=15)
-    num_w     = 0.9 * cm
-    q_header  = Table([[num_cell, q_cell]], colWidths=[num_w, content_width - 28 - num_w])
-    q_header.setStyle(TableStyle([
-        ("VALIGN",         (0, 0), (-1, -1), "MIDDLE"),
-        ("BACKGROUND",     (0, 0), (0, 0),  _C_NUM_BG),
-        ("BOX",            (0, 0), (0, 0),  0.5, _C_ACCENT),
-        ("LEFTPADDING",    (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING",   (0, 0), (-1, -1), 4),
-        ("TOPPADDING",     (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING",  (0, 0), (-1, -1), 4),
+    # ── Number + question ──
+    num = _p(f"<b>{index}</b>", bold, 8, _BLUE, TA_CENTER, leading=10)
+    num_cell = Table([[num]], colWidths=[0.7 * cm])
+    num_cell.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), _BLUE_PALE),
+        ("BOX",           (0, 0), (-1, -1), 0.5, _BLUE_LINE),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 3),
+        ("TOPPADDING",    (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
     ]))
 
-    rows: list = [[q_header], [Spacer(1, 0.2 * cm)]]
+    q_text = _p(f"<b>{escape(question)}</b>", bold, 9, _TEXT, TA_LEFT, leading=12)
+    q_row = Table(
+        [[num_cell, q_text]],
+        colWidths=[0.7 * cm, inner_w - 0.7 * cm - 4],
+    )
+    q_row.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+        ("TOPPADDING",    (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ("LEFTPADDING",   (0, 1), (0, 1),   4),
+    ]))
 
-    # ── Photo FIRST (above answer) ──
+    rows: list = [[q_row]]
+
+    # ── Photo (above answer) ──
     if require_photo:
-        label = _p("<b>Rasm</b>", bold, 9, _C_ACCENT, TA_LEFT)
-        rows.append([label])
-        rows.append([Spacer(1, 0.08 * cm)])
-        for bit in _photo_block(image_path, font, content_width - 28):
+        rows.append([Spacer(1, 0.15 * cm)])
+        for bit in _photo_block(image_path, font, inner_w):
             rows.append([bit])
-        rows.append([Spacer(1, 0.18 * cm)])
 
-    # ── Answer text ──
-    ans_label = _p("<b>Javob</b>", bold, 9, _C_ACCENT, TA_LEFT)
-    if answer_text and answer_text.strip():
-        ans_body = _p(
-            escape(answer_text).replace("\n", "<br/>"),
-            font, 10, _C_TEXT, TA_LEFT, leading=14,
-        )
-        ans_inner = Table([[ans_body]], colWidths=[content_width - 52])
-        ans_inner.setStyle(TableStyle([
-            ("BACKGROUND",   (0, 0), (-1, -1), colors.white),
-            ("BOX",          (0, 0), (-1, -1), 0.5, _C_BORDER),
-            ("LEFTPADDING",  (0, 0), (-1, -1), 8),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-            ("TOPPADDING",   (0, 0), (-1, -1), 8),
-            ("BOTTOMPADDING",(0, 0), (-1, -1), 8),
-        ]))
-    else:
-        ans_body = _p("—", font, 10, _C_MUTED, TA_LEFT)
-        ans_inner = Table([[ans_body]], colWidths=[content_width - 52])
-        ans_inner.setStyle(TableStyle([
-            ("BACKGROUND",   (0, 0), (-1, -1), colors.white),
-            ("BOX",          (0, 0), (-1, -1), 0.5, _C_BORDER),
-            ("LEFTPADDING",  (0, 0), (-1, -1), 8),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-            ("TOPPADDING",   (0, 0), (-1, -1), 8),
-            ("BOTTOMPADDING",(0, 0), (-1, -1), 8),
-        ]))
+    # ── Answer ──
+    rows.append([Spacer(1, 0.12 * cm)])
 
-    rows.append([ans_label])
-    rows.append([Spacer(1, 0.06 * cm)])
-    rows.append([ans_inner])
+    ans_txt = (answer_text or "").strip() or "—"
+    ans_p = _p(
+        escape(ans_txt).replace("\n", "<br/>"),
+        font, 9, _TEXT if ans_txt != "—" else _MUTED,
+        TA_LEFT, leading=12,
+    )
+    ans_box = Table([[ans_p]], colWidths=[ans_w])
+    ans_box.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), _WHITE),
+        ("BOX",           (0, 0), (-1, -1), 0.4, _BORDER),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 7),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 7),
+        ("TOPPADDING",    (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    rows.append([ans_box])
 
-    card = Table(rows, colWidths=[content_width - 24])
+    card = Table(rows, colWidths=[inner_w])
     card.setStyle(TableStyle([
-        ("BACKGROUND",   (0, 0), (-1, -1), _C_BG_CARD),
-        ("BOX",          (0, 0), (-1, -1), 0.75, _C_BORDER),
-        ("LINEBEFORE",   (0, 0), (0, -1),  4,    _C_ACCENT),
-        ("LEFTPADDING",  (0, 0), (-1, -1), 14),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-        ("TOPPADDING",   (0, 0), (-1, -1), 12),
-        ("BOTTOMPADDING",(0, 0), (-1, -1), 12),
+        ("BACKGROUND",    (0, 0), (-1, -1), _WHITE),
+        ("BOX",           (0, 0), (-1, -1), 0.5, _BORDER),
+        ("LINEBEFORE",    (0, 0), (0, -1),  3, _BLUE),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 10),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+        ("TOPPADDING",    (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
     ]))
     return card
 
 
-# ──────────────── Footer canvas ────────────────
+# ── Footer ───────────────────────────────────────────────────────────
 
 def _footer(canvas, doc):
     canvas.saveState()
-    canvas.setFillColor(_C_MUTED)
-    canvas.setFont("Helvetica", 7.5)
+    canvas.setFillColor(_MUTED)
+    canvas.setFont("Helvetica", 7)
     canvas.drawCentredString(
         A4[0] / 2,
-        1.1 * cm,
+        0.9 * cm,
         f"Telegram bot orqali to'ldirildi  •  {datetime.now().strftime('%d.%m.%Y %H:%M')}",
     )
-    canvas.setStrokeColor(_C_BORDER)
-    canvas.setLineWidth(0.5)
-    canvas.line(2 * cm, 1.35 * cm, A4[0] - 2 * cm, 1.35 * cm)
+    canvas.setStrokeColor(_BORDER)
+    canvas.setLineWidth(0.4)
+    canvas.line(2 * cm, 1.1 * cm, A4[0] - 2 * cm, 1.1 * cm)
     canvas.restoreState()
 
 
-# ──────────────── Main builder ────────────────
+# ── Main builder ─────────────────────────────────────────────────────
 
 def build_application_pdf(
     *,
@@ -292,31 +294,28 @@ def build_application_pdf(
         fd, out_path = tempfile.mkstemp(suffix=".pdf")
         os.close(fd)
 
-    content_w = A4[0] - 4 * cm
+    content_w = A4[0] - 3.6 * cm  # left 1.8 + right 1.8
 
     doc = SimpleDocTemplate(
         out_path,
         pagesize=A4,
-        rightMargin=2 * cm,
-        leftMargin=2 * cm,
-        topMargin=1.4 * cm,
-        bottomMargin=2 * cm,
+        rightMargin=1.8 * cm,
+        leftMargin=1.8 * cm,
+        topMargin=1.2 * cm,
+        bottomMargin=1.8 * cm,
     )
     story: list = []
 
-    # Header
     story.append(_header_block(vacancy_title, applicant_label, font, bold, content_w))
-    story.append(Spacer(1, 0.5 * cm))
+    story.append(Spacer(1, 0.35 * cm))
 
-    # Hint
     hint = _p(
-        "Anketa Telegram-bot orqali to'ldirildi. Quyida har bir savol bo'yicha javoblar.",
-        font, 8, _C_MUTED, TA_LEFT, leading=11,
+        f"Jami {len(items)} ta savol  •  Anketa Telegram bot orqali to'ldirildi",
+        font, 7.5, _MUTED, TA_LEFT, leading=10,
     )
     story.append(hint)
-    story.append(Spacer(1, 0.4 * cm))
+    story.append(Spacer(1, 0.25 * cm))
 
-    # Question cards
     for i, row in enumerate(items, start=1):
         card = _question_card(
             index=i,
@@ -329,7 +328,7 @@ def build_application_pdf(
             content_width=content_w,
         )
         story.append(KeepTogether([card]))
-        story.append(Spacer(1, 0.4 * cm))
+        story.append(Spacer(1, 0.22 * cm))
 
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     return out_path
