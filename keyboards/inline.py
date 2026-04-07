@@ -161,6 +161,7 @@ def vacancy_edit_kb(vacancy_id: int, is_active: bool) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(InlineKeyboardButton(text="✏️ Nomni o'zgartirish",    callback_data=f"advt:{vacancy_id}"))
     b.row(InlineKeyboardButton(text="📝 Tavsifni o'zgartirish", callback_data=f"advd:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text="❓ Savollar",              callback_data=f"admq:{vacancy_id}"))
     toggle = "⏸ Faolsizlashtirish" if is_active else "✅ Faollashtirish"
     b.row(InlineKeyboardButton(text=toggle,                     callback_data=f"adva:{vacancy_id}"))
     b.row(InlineKeyboardButton(text="🗑 O'chirish",             callback_data=f"advdel:{vacancy_id}"))

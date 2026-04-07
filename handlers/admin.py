@@ -346,7 +346,7 @@ async def adm_q_vacancy(query: CallbackQuery, state: FSMContext) -> None:
     for q in qs:
         icon = "📷" if q.require_photo else "📝"
         b.row(InlineKeyboardButton(text=f"{icon} #{q.id} — {q.text[:28]}", callback_data=f"adqe:{q.id}"))
-    b.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="admq:back"))
+    b.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data=f"admve:{vid}"))
     await _edit_or_answer(query, text, b.as_markup())
 
 
