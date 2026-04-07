@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import BotCommand
 
 from config import conf
 from handlers import admin, ai_chat, channel_review, faq, user
@@ -26,6 +27,10 @@ async def main() -> None:
     dp.include_router(ai_chat.router)
     dp.include_router(faq.router)
     dp.include_router(user.router)
+
+    await bot.set_my_commands([
+        BotCommand(command="start", description="Botni ishga tushirish"),
+    ])
 
     await dp.start_polling(bot)
 
