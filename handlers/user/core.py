@@ -64,6 +64,25 @@ class HRCandidateState(StatesGroup):
 _reminder_tasks: dict[int, asyncio.Task] = {}
 
 
+async def _delete_prompt_message(bot, chat_id: int, state: FSMContext) -> None:
+    data = await state.get_data()
+    mid = data.get("bot_prompt_msg_id")
+    if not mid:
+        return
+    try:
+        await bot.delete_message(chat_id, mid)
+    except Exception:
+        pass
+    await state.update_data(bot_prompt_msg_id=None)
+
+
+async def _send_prompt(bot, chat_id: int, state: FSMContext, text: str, reply_markup=None):
+    await _delete_prompt_message(bot, chat_id, state)
+    sent = await bot.send_message(chat_id, text, reply_markup=reply_markup)
+    await state.update_data(bot_prompt_msg_id=sent.message_id)
+    return sent
+
+
 def _is_url(text: str | None) -> bool:
     if not text:
         return False
@@ -192,18 +211,17 @@ async def _ask_current(target: Message | CallbackQuery, state: FSMContext) -> No
         one_time_keyboard=True,
     )
 
-    if isinstance(target, Message):
-        await target.answer(text, reply_markup=reply_markup)
-    else:
-        await target.message.answer(text, reply_markup=reply_markup)
+    await _send_prompt(bot, chat_id, state, text, reply_markup=reply_markup)
 
 
 async def _ask_resume_after_form(bot, state: FSMContext, chat_id: int) -> None:
     data = await state.get_data()
     lang = data.get("ui_lang") or LANG_UZ
     await state.set_state(PostFormState.waiting_resume)
-    await bot.send_message(
+    await _send_prompt(
+        bot,
         chat_id,
+        state,
         msg(lang, "hr_resume_q"),
         reply_markup=_stop_kb(lang),
     )
@@ -623,7 +641,13 @@ async def _ask_hr_custom_question(message: Message, state: FSMContext) -> None:
 
     q = questions[idx]
     text = f"❓ <b>{idx + 1} / {len(questions)}</b>\n\n{q['text']}"
-    await message.answer(text + "\n\n" + msg(lang, "form_hint_text"), reply_markup=_stop_kb(lang))
+    await _send_prompt(
+        message.bot,
+        message.chat.id,
+        state,
+        text + "\n\n" + msg(lang, "form_hint_text"),
+        reply_markup=_stop_kb(lang),
+    )
 
 
 async def _send_hr_test_step(message: Message, state: FSMContext) -> None:
@@ -632,8 +656,8 @@ async def _send_hr_test_step(message: Message, state: FSMContext) -> None:
     vacancy = await Vacancy.get_or_none(data.get("vacancy_id"))
     task_text = ((_bilingual_value(vacancy, lang, "test_task_text") or "").strip()) if vacancy else ""
     if task_text:
-        await message.answer(task_text, reply_markup=_stop_kb(lang))
-        await message.answer(msg(lang, "hr_test_waiting"), reply_markup=hr_test_choice_kb(lang))
+        await _send_prompt(message.bot, message.chat.id, state, task_text, reply_markup=_stop_kb(lang))
+        await _send_prompt(message.bot, message.chat.id, state, msg(lang, "hr_test_waiting"), reply_markup=hr_test_choice_kb(lang))
         return
 
     await state.update_data(test_text=None, test_doc_id=None, test_doc_name=None)
@@ -656,6 +680,10 @@ async def cb_hr_apply(query: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     title = (_bilingual_value(v, lang, "title") or v.title).strip()
     await state.update_data(vacancy_id=vid, vacancy_title=title, ui_lang=lang)
+    try:
+        await query.message.delete()
+    except TelegramBadRequest:
+        pass
     await query.message.answer(msg(lang, "hr_pd_text"), reply_markup=hr_pd_consent_kb(vid, lang))
 
 
@@ -682,6 +710,10 @@ async def cb_hr_agree(query: CallbackQuery, state: FSMContext) -> None:
         custom_answers=[],
         custom_idx=0,
     )
+    try:
+        await query.message.delete()
+    except TelegramBadRequest:
+        pass
     await query.message.answer(msg(lang, "hr_name_q"), reply_markup=_stop_kb(lang))
 
 
@@ -719,6 +751,10 @@ async def hr_city_step(query: CallbackQuery, state: FSMContext) -> None:
     lang = (await state.get_data()).get("ui_lang", LANG_UZ)
     city = (query.data or "").split(":", 1)[1]
     await state.update_data(city=city)
+    try:
+        await query.message.delete()
+    except TelegramBadRequest:
+        pass
     await state.set_state(HRCandidateState.waiting_resume)
     await query.message.answer(msg(lang, "hr_resume_q"), reply_markup=_stop_kb(lang))
 
@@ -1088,6 +1124,7 @@ async def post_test_text(message: Message, state: FSMContext) -> None:
 async def stop_any_fsm(message: Message, state: FSMContext) -> None:
     if message.from_user:
         _cancel_reminder(message.from_user.id)
+    await _delete_prompt_message(message.bot, message.chat.id, state)
     lang = (await state.get_data()).get("ui_lang") or (await _user_lang(message.from_user.id if message.from_user else 0))
     await state.clear()
     await message.answer(msg(lang, "answer_stop"), reply_markup=_main_kb(lang))

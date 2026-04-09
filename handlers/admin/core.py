@@ -27,6 +27,7 @@ from utils.user_locale import get_user_locale
 from locales.messages import LANG_UZ, msg, norm_lang
 
 router = Router(name="admin")
+_admin_panel_msg_by_user: dict[int, int] = {}
 
 
 class AdminVacancySG(StatesGroup):
@@ -76,10 +77,28 @@ async def _delete_msg(bot, chat_id: int, msg_id: int | None) -> None:
         pass
 
 
+async def _send_prompt_and_track(state: FSMContext, message: Message, text: str, reply_markup=None) -> None:
+    data = await state.get_data()
+    await _delete_msg(message.bot, message.chat.id, data.get("prompt_msg_id"))
+    sent = await message.answer(text, reply_markup=reply_markup)
+    await state.update_data(prompt_msg_id=sent.message_id)
+
+
+async def _send_prompt_from_query_and_track(state: FSMContext, query: CallbackQuery, text: str, reply_markup=None) -> None:
+    data = await state.get_data()
+    await _delete_msg(query.bot, query.message.chat.id, data.get("prompt_msg_id"))
+    sent = await query.message.answer(text, reply_markup=reply_markup)
+    await state.update_data(prompt_msg_id=sent.message_id)
+
+
 async def _edit_or_answer(query: CallbackQuery, text: str, reply_markup=None) -> None:
     try:
         await query.message.edit_text(text, reply_markup=reply_markup)
     except TelegramBadRequest:
+        try:
+            await query.message.delete()
+        except Exception:
+            pass
         await query.message.answer(text, reply_markup=reply_markup)
 
 
@@ -105,11 +124,15 @@ async def _vacancy_edit_text(vid: int) -> tuple[str, bool]:
     )
     q_count = int(r.scalar() or 0)
     status = "✅ Faol" if v.is_active else "⏸ Nofaol"
-    desc = v.description or "—"
+    title_ru = (v.title_ru or v.title or "").strip() or "—"
+    title_uz = (v.title_uz or v.title or "").strip() or "—"
+    desc_ru = (v.description_ru or v.description or "").strip() or "—"
+    desc_uz = (v.description_uz or v.description or "").strip() or "—"
     task = "bor" if v.test_task_text else "yo'q"
     text = (
-        f"💼 <b>{v.title}</b>\n\n"
-        f"📄 Tavsif: {desc}\n"
+        f"💼 <b>{title_ru} / {title_uz}</b>\n\n"
+        f"📄 Tavsif (RU): {desc_ru}\n"
+        f"📄 Tavsif (UZ): {desc_uz}\n"
         f"📊 Holat: {status}\n"
         f"❓ Savollar: {q_count} ta\n"
         f"🎯 Test topshiriq: {task}"
@@ -126,8 +149,16 @@ async def cmd_admin(message: Message, state: FSMContext) -> None:
         return
     await state.clear()
     lang = await _admin_lang(message.from_user.id if message.from_user else None)
+    prev_mid = _admin_panel_msg_by_user.get(message.from_user.id) if message.from_user else None
+    if prev_mid:
+        try:
+            await message.bot.delete_message(message.chat.id, prev_mid)
+        except Exception:
+            pass
     await message.answer("🛠 Admin rejimi", reply_markup=ReplyKeyboardRemove())
-    await message.answer("🛠 <b>Admin panel</b>", reply_markup=admin_main_kb(lang))
+    panel = await message.answer("🛠 <b>Admin panel</b>", reply_markup=admin_main_kb(lang))
+    if message.from_user:
+        _admin_panel_msg_by_user[message.from_user.id] = panel.message_id
 
 
 # ─────────────────────────── Vacancy list ───────────────────────────
@@ -162,11 +193,12 @@ async def adm_exit_to_user_menu(query: CallbackQuery, state: FSMContext) -> None
 async def adm_vac_add_start(query: CallbackQuery, state: FSMContext) -> None:
     await query.answer()
     await state.set_state(AdminVacancySG.title)
-    msg = await query.message.answer(
+    await _send_prompt_from_query_and_track(
+        state,
+        query,
         "✏️ Vakansiya nomini yozing.\nFormat: RU / UZ",
         reply_markup=_stop_kb(),
     )
-    await state.update_data(prompt_msg_id=msg.message_id)
 
 
 @router.message(AdminVacancySG.title, AdminFilter(), F.text)
@@ -229,11 +261,17 @@ async def adm_ve_title_start(query: CallbackQuery, state: FSMContext) -> None:
     except (ValueError, IndexError):
         return
     await state.set_state(AdminVacancyEditSG.title)
-    msg = await query.message.answer(
+    await _send_prompt_from_query_and_track(
+        state,
+        query,
         "✏️ Vakansiyaning yangi nomini yozing.\nFormat: RU / UZ",
         reply_markup=_back_kb(f"admback:vac_edit:{vid}"),
     )
-    await state.update_data(edit_vacancy_id=vid, prompt_msg_id=msg.message_id)
+    try:
+        await query.message.delete()
+    except Exception:
+        pass
+    await state.update_data(edit_vacancy_id=vid)
 
 
 @router.message(AdminVacancyEditSG.title, AdminFilter(), F.text)
@@ -268,12 +306,18 @@ async def adm_ve_desc_start(query: CallbackQuery, state: FSMContext) -> None:
     except (ValueError, IndexError):
         return
     await state.set_state(AdminVacancyEditSG.description)
-    msg = await query.message.answer(
+    await _send_prompt_from_query_and_track(
+        state,
+        query,
         "📝 Yangi tavsifni yozing.\nFormat: RU / UZ\n"
         "O'chirish uchun — belgisini yuboring.",
         reply_markup=_back_kb(f"admback:vac_edit:{vid}"),
     )
-    await state.update_data(edit_vacancy_id=vid, prompt_msg_id=msg.message_id)
+    try:
+        await query.message.delete()
+    except Exception:
+        pass
+    await state.update_data(edit_vacancy_id=vid)
 
 
 @router.message(AdminVacancyEditSG.description, AdminFilter(), F.text)
@@ -329,11 +373,13 @@ async def adm_ve_task_text_start(query: CallbackQuery, state: FSMContext) -> Non
     except (ValueError, IndexError):
         return
     await state.set_state(AdminVacancyEditSG.test_task_text)
-    msg = await query.message.answer(
+    await _send_prompt_from_query_and_track(
+        state,
+        query,
         "✏️ Test topshiriq uchun link/matn yuboring.\nFormat: RU / UZ\n🗑 O'chirish uchun - yuboring.",
         reply_markup=_back_kb(f"advtask:{vid}"),
     )
-    await state.update_data(edit_vacancy_id=vid, prompt_msg_id=msg.message_id)
+    await state.update_data(edit_vacancy_id=vid)
 
 
 @router.message(AdminVacancyEditSG.test_task_text, AdminFilter(), F.text)
@@ -348,6 +394,10 @@ async def adm_ve_task_text_save(message: Message, state: FSMContext) -> None:
         await Vacancy.update(vid, test_task_text=t_ru, test_task_text_ru=t_ru, test_task_text_uz=t_uz)
     await _delete_msg(message.bot, message.chat.id, data.get("prompt_msg_id"))
     await state.clear()
+    try:
+        await message.delete()
+    except Exception:
+        pass
     v = await Vacancy.get_or_none(vid)
     txt = (
         f"🎯 <b>Test topshiriq: {v.title}</b>\n\n"
@@ -488,11 +538,13 @@ async def adm_q_add_start(query: CallbackQuery, state: FSMContext) -> None:
     except (ValueError, IndexError):
         return
     await state.set_state(AdminQuestionSG.enter_text)
-    msg = await query.message.answer(
+    await _send_prompt_from_query_and_track(
+        state,
+        query,
         "✏️ Savol matnini yozing.\nFormat: RU / UZ",
         reply_markup=_back_kb(f"admback:q_list:{vid}"),
     )
-    await state.update_data(vacancy_id=vid, prompt_msg_id=msg.message_id)
+    await state.update_data(vacancy_id=vid)
 
 
 @router.message(AdminQuestionSG.enter_text, AdminFilter(), F.text)
@@ -576,11 +628,13 @@ async def adm_q_edit_text_start(query: CallbackQuery, state: FSMContext) -> None
     except (ValueError, IndexError):
         return
     await state.set_state(AdminQuestionSG.enter_text)
-    msg = await query.message.answer(
+    await _send_prompt_from_query_and_track(
+        state,
+        query,
         "✏️ Savolning yangi matnini yozing.\nFormat: RU / UZ",
         reply_markup=_back_kb(f"admback:q_edit:{qid}"),
     )
-    await state.update_data(edit_question_id=qid, prompt_msg_id=msg.message_id)
+    await state.update_data(edit_question_id=qid)
 
 
 @router.callback_query(F.data.startswith("adqd:"), AdminFilter())

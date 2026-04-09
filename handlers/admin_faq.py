@@ -57,6 +57,10 @@ async def _edit_or_answer(query: CallbackQuery, text: str, reply_markup=None) ->
     try:
         await query.message.edit_text(text, reply_markup=reply_markup)
     except TelegramBadRequest:
+        try:
+            await query.message.delete()
+        except Exception:
+            pass
         await query.message.answer(text, reply_markup=reply_markup)
 
 
