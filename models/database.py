@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, delete as sqlalchemy_delete, DateTime, update as sqlalchemy_update, func, select
+from sqlalchemy import BigInteger, delete as sqlalchemy_delete, DateTime, update as sqlalchemy_update, func, select, inspect, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, AsyncAttrs
 from sqlalchemy.orm import declared_attr, sessionmaker, DeclarativeBase, Mapped, mapped_column, selectinload
 
@@ -38,6 +38,44 @@ class AsyncDatabaseSession:
     async def create_all(self):
         async with self._engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            await self._ensure_compat_columns(conn)
+
+    async def _ensure_compat_columns(self, conn) -> None:
+        """Add missing columns for already existing tables without migrations."""
+        def _missing_columns(sync_conn) -> list[tuple[str, str, str]]:
+            inspector = inspect(sync_conn)
+            existing: dict[str, set[str]] = {}
+            for table_name in inspector.get_table_names():
+                existing[table_name] = {column["name"] for column in inspector.get_columns(table_name)}
+
+            required = [
+                ("bot_users", "locale", "VARCHAR(8)"),
+                ("vacancies", "test_task_text", "TEXT"),
+                ("vacancies", "test_task_file_id", "VARCHAR(255)"),
+                ("vacancies", "test_task_file_name", "VARCHAR(255)"),
+                ("vacancies", "title_ru", "VARCHAR(255)"),
+                ("vacancies", "title_uz", "VARCHAR(255)"),
+                ("vacancies", "description_ru", "TEXT"),
+                ("vacancies", "description_uz", "TEXT"),
+                ("vacancies", "test_task_text_ru", "TEXT"),
+                ("vacancies", "test_task_text_uz", "TEXT"),
+                ("questions", "text_ru", "TEXT"),
+                ("questions", "text_uz", "TEXT"),
+                ("faqs", "question_ru", "TEXT"),
+                ("faqs", "question_uz", "TEXT"),
+                ("faqs", "answer_ru", "TEXT"),
+                ("faqs", "answer_uz", "TEXT"),
+            ]
+            missing: list[tuple[str, str, str]] = []
+            for table_name, column_name, ddl_type in required:
+                if table_name not in existing:
+                    continue
+                if column_name not in existing[table_name]:
+                    missing.append((table_name, column_name, ddl_type))
+            return missing
+
+        for table_name, column_name, ddl_type in await conn.run_sync(_missing_columns):
+            await conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {ddl_type}"))
 
     # async def drop_all(self):
     #     async with self._engine.begin() as conn:

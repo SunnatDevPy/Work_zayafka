@@ -1,69 +1,155 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from locales.messages import LANG_UZ, norm_lang, msg
 from models.vacancy import Vacancy
 
 
-def vacancies_kb(vacancies: list[Vacancy]) -> InlineKeyboardMarkup:
-    b = InlineKeyboardBuilder()
-    for v in vacancies:
-        b.row(InlineKeyboardButton(text=f"💼 {v.title}", callback_data=f"vac:{v.id}"))
-    b.row(InlineKeyboardButton(text="❌ Bekor qilish", callback_data="vac:cancel"))
-    return b.as_markup()
-
-
-def vacancy_view_list_kb(vacancies: list[Vacancy]) -> InlineKeyboardMarkup:
-    """Клиентский список вакансий для просмотра."""
-    b = InlineKeyboardBuilder()
-    for v in vacancies:
-        b.row(InlineKeyboardButton(text=f"📋 {v.title}", callback_data=f"vview:{v.id}"))
-    b.row(InlineKeyboardButton(text="🔙 Asosiy menyu", callback_data="vview:back"))
-    return b.as_markup()
-
-
-def vacancy_view_detail_kb(vacancy_id: int) -> InlineKeyboardMarkup:
-    """Детальный просмотр вакансии + кнопка подать заявку."""
-    b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="📝 Ariza qoldirish", callback_data=f"vac:{vacancy_id}"))
-    b.row(InlineKeyboardButton(text="🔙 Orqaga", callback_data="vview:back"))
-    return b.as_markup()
-
-
-def review_kb() -> InlineKeyboardMarkup:
-    """Клавиатура подтверждения PDF перед отправкой в канал."""
+def language_pick_kb() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text="✅ Tasdiqlash", callback_data="rev:ok"),
-        InlineKeyboardButton(text="🔄 Qaytadan", callback_data="rev:redo"),
+        InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang:ru", style="danger"),
+        InlineKeyboardButton(text="🇺🇿 O'zbekcha", callback_data="lang:uz", style="success"),
     )
     return b.as_markup()
 
 
-def admin_main_kb() -> InlineKeyboardMarkup:
+def vacancies_kb(vacancies: list[Vacancy], lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
     b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="💼 Vakansiyalar",       callback_data="adm:vac"))
-    b.row(InlineKeyboardButton(text="❓ Savollar",           callback_data="adm:q"))
-    b.row(InlineKeyboardButton(text="📋 FAQ boshqaruvi",     callback_data="adm:faq"))
-    b.row(InlineKeyboardButton(text="📢 Reklama",            callback_data="adm:bc"))
+    for v in vacancies:
+        if lg == "ru":
+            title = (getattr(v, "title_ru", None) or getattr(v, "title_uz", None) or v.title or "").strip()
+        else:
+            title = (getattr(v, "title_uz", None) or getattr(v, "title_ru", None) or v.title or "").strip()
+        b.row(InlineKeyboardButton(text=f"💼 {title}", callback_data=f"vac:{v.id}"))
+    b.row(InlineKeyboardButton(text=msg(lg, "inline_cancel"), style="danger",callback_data="vac:cancel"))
+    return b.as_markup()
+
+
+def vacancy_view_list_kb(vacancies: list[Vacancy], lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
+    b = InlineKeyboardBuilder()
+    for v in vacancies:
+        if lg == "ru":
+            title = (getattr(v, "title_ru", None) or getattr(v, "title_uz", None) or v.title or "").strip()
+        else:
+            title = (getattr(v, "title_uz", None) or getattr(v, "title_ru", None) or v.title or "").strip()
+        b.row(InlineKeyboardButton(text=f"📋 {title}", callback_data=f"vview:{v.id}"))
+    b.row(InlineKeyboardButton(text=msg(lg, "inline_back_main"), callback_data="vview:back"))
+    return b.as_markup()
+
+
+def vacancy_view_detail_kb(vacancy_id: int, lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(
+            text=msg(lg, "inline_apply_vac"),
+            callback_data=f"hrapply:{vacancy_id}",
+        )
+    )
+    b.row(InlineKeyboardButton(text=msg(lg, "inline_back"), callback_data="vview:back"))
+    return b.as_markup()
+
+
+def hr_pd_consent_kb(vacancy_id: int, lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
+    b = InlineKeyboardBuilder()
+    b.row(InlineKeyboardButton(text=msg(lg, "hr_pd_agree_btn"), callback_data=f"hragree:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text=msg(lg, "inline_back"), callback_data=f"vview:{vacancy_id}"))
+    return b.as_markup()
+
+
+def hr_employment_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(text=msg(lg, "hr_emp_full"), callback_data="hremp:full"),
+        InlineKeyboardButton(text=msg(lg, "hr_emp_part"), callback_data="hremp:part"),
+    )
+    return b.as_markup()
+
+
+def hr_payment_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(text=msg(lg, "hr_pay_salary"), callback_data="hrpay:salary"),
+        InlineKeyboardButton(text=msg(lg, "hr_pay_piece"), callback_data="hrpay:piece"),
+    )
+    return b.as_markup()
+
+
+def hr_city_kb() -> InlineKeyboardMarkup:
+    cities = [
+        "Toshkent", "Samarqand", "Buxoro",
+        "Andijon", "Farg'ona", "Namangan",
+        "Nukus", "Xiva", "Qarshi",
+        "Termiz", "Jizzax", "Navoiy",
+    ]
+    b = InlineKeyboardBuilder()
+    for i in range(0, len(cities), 2):
+        right = cities[i + 1] if i + 1 < len(cities) else None
+        if right:
+            b.row(
+                InlineKeyboardButton(text=cities[i], callback_data=f"hrcity:{cities[i]}"),
+                InlineKeyboardButton(text=right, callback_data=f"hrcity:{right}"),
+            )
+        else:
+            b.row(InlineKeyboardButton(text=cities[i], callback_data=f"hrcity:{cities[i]}"))
+    return b.as_markup()
+
+
+def hr_test_choice_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(text=msg(lg, "hr_test_send_ready"), callback_data="hrtest:send"),
+        InlineKeyboardButton(text=msg(lg, "hr_test_do_later"), callback_data="hrtest:later"),
+    )
+    return b.as_markup()
+
+
+def review_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(text=msg(lg, "review_ok"), callback_data="rev:ok"),
+        InlineKeyboardButton(text=msg(lg, "review_redo_btn"), callback_data="rev:redo"),
+    )
+    return b.as_markup()
+
+
+def admin_main_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.row(InlineKeyboardButton(text="💼 Вакансии / Vakansiyalar", callback_data="adm:vac"))
+    b.row(InlineKeyboardButton(text="📋 FAQ управление / FAQ boshqaruvi", callback_data="adm:faq"))
+    b.row(InlineKeyboardButton(text="📢 Рассылка / Reklama", callback_data="adm:bc"))
+    b.row(InlineKeyboardButton(text="🏠 Меню пользователя / Foydalanuvchi menyusi", callback_data="adm:exit"))
     return b.as_markup()
 
 
 # ── FAQ — user side ──────────────────────────────────────────────────
 
-def faq_list_kb(faqs: list) -> InlineKeyboardMarkup:
-    """List of FAQ questions for users."""
+def faq_list_kb(faqs: list, lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
     b = InlineKeyboardBuilder()
     for f in faqs:
-        short = f.question[:55] + "…" if len(f.question) > 55 else f.question
+        if lg == "ru":
+            q = (getattr(f, "question_ru", None) or getattr(f, "question_uz", None) or f.question or "").strip()
+        else:
+            q = (getattr(f, "question_uz", None) or getattr(f, "question_ru", None) or f.question or "").strip()
+        short = q[:55] + "…" if len(q) > 55 else q
         b.row(InlineKeyboardButton(text=f"❓ {short}", callback_data=f"faq:{f.id}"))
-    b.row(InlineKeyboardButton(text="🔙 Asosiy menyu", callback_data="faq:close"))
+    b.row(InlineKeyboardButton(text=msg(lg, "inline_back_main"), callback_data="faq:close"))
     return b.as_markup()
 
 
-def faq_detail_kb() -> InlineKeyboardMarkup:
-    """Back button shown on a single FAQ answer."""
+def faq_detail_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
     b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="⬅️ Barcha savollar", callback_data="faq:list"))
+    b.row(InlineKeyboardButton(text=msg(lg, "faq_back_list"), callback_data="faq:list"))
     return b.as_markup()
 
 
@@ -74,25 +160,25 @@ def admin_faq_list_kb(faqs: list) -> InlineKeyboardMarkup:
     for f in faqs:
         short = f.question[:48] + "…" if len(f.question) > 48 else f.question
         b.row(InlineKeyboardButton(text=f"📝 {short}", callback_data=f"admfe:{f.id}"))
-    b.row(InlineKeyboardButton(text="➕ FAQ qo'shish", callback_data="admfa:add"))
-    b.row(InlineKeyboardButton(text="⬅️ Orqaga",      callback_data="admfa:back"))
+    b.row(InlineKeyboardButton(text="➕ Добавить FAQ / FAQ qo'shish", callback_data="admfa:add"))
+    b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data="admfa:back"))
     return b.as_markup()
 
 
 def faq_edit_kb(faq_id: int) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="✏️ Savolni o'zgartirish", callback_data=f"admfq:{faq_id}"))
-    b.row(InlineKeyboardButton(text="✏️ Javobni o'zgartirish", callback_data=f"admfa_ans:{faq_id}"))
-    b.row(InlineKeyboardButton(text="🗑 O'chirish",            callback_data=f"admfd:{faq_id}"))
-    b.row(InlineKeyboardButton(text="⬅️ Orqaga",              callback_data="adm:faq"))
+    b.row(InlineKeyboardButton(text="✏️ Изменить вопрос / Savolni o'zgartirish", callback_data=f"admfq:{faq_id}"))
+    b.row(InlineKeyboardButton(text="✏️ Изменить ответ / Javobni o'zgartirish", callback_data=f"admfa_ans:{faq_id}"))
+    b.row(InlineKeyboardButton(text="🗑 Удалить / O'chirish", callback_data=f"admfd:{faq_id}"))
+    b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data="adm:faq"))
     return b.as_markup()
 
 
 def faq_delete_confirm_kb(faq_id: int) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text="✅ Ha, o'chirish", callback_data=f"admfd_ok:{faq_id}"),
-        InlineKeyboardButton(text="❌ Bekor",         callback_data=f"admfe:{faq_id}"),
+        InlineKeyboardButton(text="✅ Да / Ha, o'chirish", callback_data=f"admfd_ok:{faq_id}"),
+        InlineKeyboardButton(text="❌ Отмена / Bekor", callback_data=f"admfe:{faq_id}"),
     )
     return b.as_markup()
 
@@ -100,8 +186,8 @@ def faq_delete_confirm_kb(faq_id: int) -> InlineKeyboardMarkup:
 def yes_no_kb(prefix: str) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text="✅ Ha",    callback_data=f"{prefix}:1"),
-        InlineKeyboardButton(text="❌ Yo'q", callback_data=f"{prefix}:0"),
+        InlineKeyboardButton(text="✅ Да / Ha", callback_data=f"{prefix}:1"),
+        InlineKeyboardButton(text="❌ Нет / Yo'q", callback_data=f"{prefix}:0"),
     )
     return b.as_markup()
 
@@ -113,8 +199,8 @@ def question_photo_kb() -> InlineKeyboardMarkup:
 def broadcast_confirm_kb() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text="📤 Hammaga yuborish", callback_data="bc:send"),
-        InlineKeyboardButton(text="❌ Bekor",            callback_data="bc:cancel"),
+        InlineKeyboardButton(text="📤 Отправить всем / Hammaga yuborish", callback_data="bc:send"),
+        InlineKeyboardButton(text="❌ Отмена / Bekor", callback_data="bc:cancel"),
     )
     return b.as_markup()
 
@@ -123,28 +209,31 @@ def vacancies_pick_kb(vacancies: list, prefix: str) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     for v in vacancies:
         b.row(InlineKeyboardButton(text=f"📌 {v.title}", callback_data=f"{prefix}:{v.id}"))
-    b.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data=f"{prefix}:back"))
+    b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data=f"{prefix}:back"))
     return b.as_markup()
 
 
-def channel_application_kb(user_id: int) -> InlineKeyboardMarkup:
+def channel_application_kb(user_id: int, lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text="✅ Qabul qilish", callback_data=f"app:ok:{user_id}"),
-        InlineKeyboardButton(text="🗑 Rad etish",    callback_data="app:del"),
+        InlineKeyboardButton(text=msg(lg, "channel_interview_btn"),style="success", callback_data=f"app:int:{user_id}"),
+        InlineKeyboardButton(text=msg(lg, "channel_reject"),style="danger", callback_data="app:del"),
     )
     return b.as_markup()
 
 
-def homework_invite_kb() -> InlineKeyboardMarkup:
+def homework_invite_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
     b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="📤 Vazifani yuborish", callback_data="hw:go"))
+    b.row(InlineKeyboardButton(text=msg(lg, "hw_send_btn"), callback_data="hw:go"))
     return b.as_markup()
 
 
-def homework_done_kb() -> InlineKeyboardMarkup:
+def homework_done_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
     b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="✅ Tayyor", callback_data="hw:done"))
+    b.row(InlineKeyboardButton(text=msg(lg, "hw_done_btn"), callback_data="hw:done"))
     return b.as_markup()
 
 
@@ -153,27 +242,36 @@ def vacancy_admin_list_kb(vacancies: list) -> InlineKeyboardMarkup:
     for v in vacancies:
         mark = "✅" if v.is_active else "⏸"
         b.row(InlineKeyboardButton(text=f"{mark} {v.title}", callback_data=f"admve:{v.id}"))
-    b.row(InlineKeyboardButton(text="➕ Vakansiya qo'shish", callback_data="admva:add"))
-    b.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="admback:admin"))
+    b.row(InlineKeyboardButton(text="➕ Добавить вакансию / Vakansiya qo'shish", callback_data="admva:add"))
+    b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data="admback:admin"))
     return b.as_markup()
 
 
 def vacancy_edit_kb(vacancy_id: int, is_active: bool) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="✏️ Nomni o'zgartirish",    callback_data=f"advt:{vacancy_id}"))
-    b.row(InlineKeyboardButton(text="📝 Tavsifni o'zgartirish", callback_data=f"advd:{vacancy_id}"))
-    b.row(InlineKeyboardButton(text="❓ Savollar",              callback_data=f"admq:{vacancy_id}"))
-    toggle = "⏸ Faolsizlashtirish" if is_active else "✅ Faollashtirish"
+    b.row(InlineKeyboardButton(text="✏️ Название / Nomni o'zgartirish", callback_data=f"advt:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text="📝 Описание / Tavsifni o'zgartirish", callback_data=f"advd:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text="🎯 Тест / Test topshiriq", callback_data=f"advtask:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text="❓ Вопросы / Savollar", callback_data=f"admq:{vacancy_id}"))
+    toggle = "⏸ Деактивировать / Faolsizlashtirish" if is_active else "✅ Активировать / Faollashtirish"
     b.row(InlineKeyboardButton(text=toggle,                     callback_data=f"adva:{vacancy_id}"))
-    b.row(InlineKeyboardButton(text="🗑 O'chirish",             callback_data=f"advdel:{vacancy_id}"))
-    b.row(InlineKeyboardButton(text="⬅️ Orqaga",               callback_data="adm:vac"))
+    b.row(InlineKeyboardButton(text="🗑 Удалить / O'chirish", callback_data=f"advdel:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data="adm:vac"))
+    return b.as_markup()
+
+
+def vacancy_task_edit_kb(vacancy_id: int) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.row(InlineKeyboardButton(text="🔗 Ссылка/текст / Link-matn qo'shish", callback_data=f"advtask_text:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text="🗑 Удалить тест / Testni o'chirish", callback_data=f"advtask_clear:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data=f"admve:{vacancy_id}"))
     return b.as_markup()
 
 
 def vacancy_delete_confirm_kb(vacancy_id: int) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text="✅ Ha, o'chirish", callback_data=f"advdel_ok:{vacancy_id}"),
-        InlineKeyboardButton(text="❌ Bekor",         callback_data=f"admve:{vacancy_id}"),
+        InlineKeyboardButton(text="✅ Да / Ha, o'chirish", callback_data=f"advdel_ok:{vacancy_id}"),
+        InlineKeyboardButton(text="❌ Отмена / Bekor", callback_data=f"admve:{vacancy_id}"),
     )
     return b.as_markup()
