@@ -83,28 +83,33 @@ def _p(text, font, size, color=_TEXT, align=TA_LEFT):
     )
 
 
-# 📄 Header
-def _header(title, user, font, bold):
-    return Table([
-        [
-            _p(f"<b>{escape(title)}</b>", bold, 16, _WHITE),
-            _p(datetime.now().strftime("%d.%m.%Y"), font, 9, _WHITE, TA_RIGHT)
-        ]
-    ], colWidths=[350, 100],
-    style=[
-        ("BACKGROUND", (0,0), (-1,-1), _NAVY),
-        ("TEXTCOLOR", (0,0), (-1,-1), _WHITE),
-        ("PADDING", (0,0), (-1,-1), 10),
-    ])
+# 📄 Header (applicant_line — ФИО / @username / id, показывается под названием)
+def _header(title, applicant_line, font, bold):
+    date_cell = _p(datetime.now().strftime("%d.%m.%Y"), font, 9, _WHITE, TA_RIGHT)
+    rows = [[_p(f"<b>{escape(title)}</b>", bold, 16, _WHITE), date_cell]]
+    style_cmds = [
+        ("BACKGROUND", (0, 0), (-1, -1), _NAVY),
+        ("TEXTCOLOR", (0, 0), (-1, -1), _WHITE),
+        ("PADDING", (0, 0), (-1, -1), 10),
+    ]
+    if applicant_line and str(applicant_line).strip():
+        rows.append(
+            [
+                _p(f"<b>{escape(str(applicant_line).strip())}</b>", font, 11, _WHITE, TA_LEFT),
+                Spacer(1, 1),
+            ]
+        )
+        style_cmds.append(("SPAN", (0, 1), (1, 1)))
+    return Table(rows, colWidths=[350, 100], style=style_cmds)
 
 
 # 📸 Photo
-def _photo(path, width):
+def _photo(path, width, max_height=8 * cm):
     if path and os.path.exists(path):
         path = _prepare_image(path)
         try:
             img = RLImage(path)
-            img._restrictSize(width, 8*cm)
+            img._restrictSize(width, max_height)
             return img
         except:
             pass
@@ -200,7 +205,13 @@ def build_fake_pdf(*, out_path: str | None = None) -> str:
     )
 
 
-def build_candidate_compact_pdf(vacancy_title: str, applicant_label: str, rows: list[tuple[str, str]], out_path: str | None = None) -> str:
+def build_candidate_compact_pdf(
+    vacancy_title: str,
+    applicant_label: str,
+    rows: list[tuple[str, str]],
+    out_path: str | None = None,
+    photo_path: str | None = None,
+) -> str:
     font, bold = _fonts()
     if not out_path:
         fd, out_path = tempfile.mkstemp(suffix=".pdf")
@@ -220,9 +231,25 @@ def build_candidate_compact_pdf(vacancy_title: str, applicant_label: str, rows: 
         safe_val = escape((value or "—").replace("\n", " "))[:380]
         table_data.append([_p(f"<b>{escape(key)}</b>", bold, 7), _p(safe_val, font, 7)])
 
-    story = [
-        _header(vacancy_title, applicant_label, font, bold),
-        Spacer(1, 6),
+    story = [_header(vacancy_title, applicant_label, font, bold), Spacer(1, 6)]
+    if photo_path and os.path.exists(photo_path):
+        pic = _photo(photo_path, 4.2 * cm, max_height=5 * cm)
+        story.append(
+            Table(
+                [[pic]],
+                colWidths=[17.3 * cm],
+                style=[
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f1f5f9")),
+                    ("BOX", (0, 0), (-1, -1), 0.4, _BORDER),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ],
+            )
+        )
+        story.append(Spacer(1, 6))
+    story.append(
         Table(
             table_data,
             colWidths=[5.3 * cm, 12.0 * cm],
@@ -235,7 +262,7 @@ def build_candidate_compact_pdf(vacancy_title: str, applicant_label: str, rows: 
                 ("TOPPADDING", (0, 0), (-1, -1), 3),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
             ],
-        ),
-    ]
+        )
+    )
     doc.build(story)
     return out_path

@@ -5,7 +5,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, KeyboardButton, Message, ReplyKeyboardMarkup
 
 from config import conf
-from keyboards.inline import homework_done_kb
+
 
 router = Router(name="user_homework")
 
@@ -40,7 +40,7 @@ async def homework_start(query: CallbackQuery, state: FSMContext) -> None:
         "📤 Bajarilgan vazifani yuboring: matn, fayl, rasm yoki video.\n"
         "✅ Hammasi tayyor bo'lsa — «Tayyor» tugmasini bosing.\n\n"
         "⛔️ Bekor: /cancel",
-        reply_markup=homework_done_kb(),
+
     )
 
 

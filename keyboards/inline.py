@@ -52,6 +52,12 @@ def vacancy_view_detail_kb(vacancy_id: int, lang: str = LANG_UZ) -> InlineKeyboa
     b.row(InlineKeyboardButton(text=msg(lg, "inline_back"), callback_data="vview:back"))
     return b.as_markup()
 
+def homework_done_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
+    b = InlineKeyboardBuilder()
+    b.row(InlineKeyboardButton(text=msg(lg, "hw_done_btn"), callback_data="hw:done"))
+    return b.as_markup()
+
 
 def hr_pd_consent_kb(vacancy_id: int, lang: str = LANG_UZ) -> InlineKeyboardMarkup:
     lg = norm_lang(lang)
@@ -111,12 +117,13 @@ def hr_test_choice_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
     return b.as_markup()
 
 
-def review_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+def hr_review_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    """Подтверждение HR-отклика перед отправкой в канал (отдельные callback от старой анкеты)."""
     lg = norm_lang(lang)
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text=msg(lg, "review_ok"), callback_data="rev:ok"),
-        InlineKeyboardButton(text=msg(lg, "review_redo_btn"), callback_data="rev:redo"),
+        InlineKeyboardButton(text=msg(lg, "review_ok"), callback_data="hrrev:ok"),
+        InlineKeyboardButton(text=msg(lg, "review_redo_btn"), callback_data="hrrev:redo"),
     )
     return b.as_markup()
 
@@ -126,6 +133,7 @@ def admin_main_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
     b.row(InlineKeyboardButton(text="💼 Вакансии / Vakansiyalar", callback_data="adm:vac"))
     b.row(InlineKeyboardButton(text="📋 FAQ управление / FAQ boshqaruvi", callback_data="adm:faq"))
     b.row(InlineKeyboardButton(text="📢 Рассылка / Reklama", callback_data="adm:bc"))
+    b.row(InlineKeyboardButton(text="👥 Пользователи / Foydalanuvchilar", callback_data="adm:users"))
     b.row(InlineKeyboardButton(text="🏠 Меню пользователя / Foydalanuvchi menyusi", callback_data="adm:exit"))
     return b.as_markup()
 
@@ -183,33 +191,12 @@ def faq_delete_confirm_kb(faq_id: int) -> InlineKeyboardMarkup:
     return b.as_markup()
 
 
-def yes_no_kb(prefix: str) -> InlineKeyboardMarkup:
-    b = InlineKeyboardBuilder()
-    b.row(
-        InlineKeyboardButton(text="✅ Да / Ha", callback_data=f"{prefix}:1"),
-        InlineKeyboardButton(text="❌ Нет / Yo'q", callback_data=f"{prefix}:0"),
-    )
-    return b.as_markup()
-
-
-def question_photo_kb() -> InlineKeyboardMarkup:
-    return yes_no_kb("qph")
-
-
 def broadcast_confirm_kb() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
         InlineKeyboardButton(text="📤 Отправить всем / Hammaga yuborish", callback_data="bc:send"),
         InlineKeyboardButton(text="❌ Отмена / Bekor", callback_data="bc:cancel"),
     )
-    return b.as_markup()
-
-
-def vacancies_pick_kb(vacancies: list, prefix: str) -> InlineKeyboardMarkup:
-    b = InlineKeyboardBuilder()
-    for v in vacancies:
-        b.row(InlineKeyboardButton(text=f"📌 {v.title}", callback_data=f"{prefix}:{v.id}"))
-    b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data=f"{prefix}:back"))
     return b.as_markup()
 
 
@@ -220,20 +207,6 @@ def channel_application_kb(user_id: int, lang: str = LANG_UZ) -> InlineKeyboardM
         InlineKeyboardButton(text=msg(lg, "channel_interview_btn"),style="success", callback_data=f"app:int:{user_id}"),
         InlineKeyboardButton(text=msg(lg, "channel_reject"),style="danger", callback_data="app:del"),
     )
-    return b.as_markup()
-
-
-def homework_invite_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
-    lg = norm_lang(lang)
-    b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text=msg(lg, "hw_send_btn"), callback_data="hw:go"))
-    return b.as_markup()
-
-
-def homework_done_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
-    lg = norm_lang(lang)
-    b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text=msg(lg, "hw_done_btn"), callback_data="hw:done"))
     return b.as_markup()
 
 
@@ -252,7 +225,6 @@ def vacancy_edit_kb(vacancy_id: int, is_active: bool) -> InlineKeyboardMarkup:
     b.row(InlineKeyboardButton(text="✏️ Название / Nomni o'zgartirish", callback_data=f"advt:{vacancy_id}"))
     b.row(InlineKeyboardButton(text="📝 Описание / Tavsifni o'zgartirish", callback_data=f"advd:{vacancy_id}"))
     b.row(InlineKeyboardButton(text="🎯 Тест / Test topshiriq", callback_data=f"advtask:{vacancy_id}"))
-    b.row(InlineKeyboardButton(text="❓ Вопросы / Savollar", callback_data=f"admq:{vacancy_id}"))
     toggle = "⏸ Деактивировать / Faolsizlashtirish" if is_active else "✅ Активировать / Faollashtirish"
     b.row(InlineKeyboardButton(text=toggle,                     callback_data=f"adva:{vacancy_id}"))
     b.row(InlineKeyboardButton(text="🗑 Удалить / O'chirish", callback_data=f"advdel:{vacancy_id}"))

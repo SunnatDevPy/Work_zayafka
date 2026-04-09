@@ -12,15 +12,14 @@ from keyboards.inline import (
     admin_faq_list_kb,
     admin_main_kb,
     faq_edit_kb,
-    vacancies_pick_kb,
     vacancy_admin_list_kb,
     vacancy_delete_confirm_kb,
     vacancy_edit_kb,
     vacancy_task_edit_kb,
 )
 from models.database import db
+from models.bot_user import BotUser
 from models.faq import Faq
-from models.question import Question
 from models.vacancy import Vacancy
 from utils.filters import AdminFilter
 from utils.user_locale import get_user_locale
@@ -38,10 +37,6 @@ class AdminVacancyEditSG(StatesGroup):
     title = State()
     description = State()
     test_task_text = State()
-
-
-class AdminQuestionSG(StatesGroup):
-    enter_text = State()
 
 
 async def _admin_lang(uid: int | None) -> str:
@@ -119,10 +114,6 @@ async def _vacancy_edit_text(vid: int) -> tuple[str, bool]:
     v = await Vacancy.get_or_none(vid)
     if not v:
         return "⚠️ Vakansiya topilmadi.", False
-    r = await db.execute(
-        select(func.count()).select_from(Question).where(Question.vacancy_id == vid)
-    )
-    q_count = int(r.scalar() or 0)
     status = "✅ Faol" if v.is_active else "⏸ Nofaol"
     title_ru = (v.title_ru or v.title or "").strip() or "—"
     title_uz = (v.title_uz or v.title or "").strip() or "—"
@@ -134,7 +125,6 @@ async def _vacancy_edit_text(vid: int) -> tuple[str, bool]:
         f"📄 Tavsif (RU): {desc_ru}\n"
         f"📄 Tavsif (UZ): {desc_uz}\n"
         f"📊 Holat: {status}\n"
-        f"❓ Savollar: {q_count} ta\n"
         f"🎯 Test topshiriq: {task}"
     )
     return text, v.is_active
@@ -170,6 +160,18 @@ async def adm_vac_list(query: CallbackQuery, state: FSMContext) -> None:
     vacs = list(r.scalars().all())
     text = "💼 <b>Vakansiyalar ro'yxati:</b>" if vacs else "📭 Vakansiyalar hozircha yo'q."
     await _edit_or_answer(query, text, vacancy_admin_list_kb(vacs))
+
+
+@router.callback_query(F.data == "adm:users", AdminFilter())
+async def adm_users_count(query: CallbackQuery, state: FSMContext) -> None:
+    await query.answer()
+    r = await db.execute(select(func.count()).select_from(BotUser))
+    n = int(r.scalar() or 0)
+    await _edit_or_answer(
+        query,
+        f"👥 <b>Пользователи бота:</b> {n}\n\nВыберите действие:",
+        admin_main_kb(await _admin_lang(query.from_user.id if query.from_user else None)),
+    )
 
 
 @router.callback_query(F.data == "adm:exit", AdminFilter())
@@ -451,14 +453,7 @@ async def adm_ve_delete_confirm(query: CallbackQuery, state: FSMContext) -> None
     v = await Vacancy.get_or_none(vid)
     if not v:
         return
-    r = await db.execute(
-        select(func.count()).select_from(Question).where(Question.vacancy_id == vid)
-    )
-    q_count = int(r.scalar() or 0)
-    confirm_text = (
-        f"🗑 <b>«{v.title}»</b> o'chirilsinmi?\n"
-        f"⚠️ Unga bog'liq {q_count} ta savol ham o'chadi."
-    )
+    confirm_text = f"🗑 <b>«{v.title}»</b> o'chirilsinmi?"
     await _edit_or_answer(query, confirm_text, vacancy_delete_confirm_kb(vid))
 
 
@@ -477,177 +472,6 @@ async def adm_ve_delete(query: CallbackQuery, state: FSMContext) -> None:
     vacs = list(r.scalars().all())
     list_text = "💼 <b>Vakansiyalar ro'yxati:</b>" if vacs else "📭 Vakansiyalar hozircha yo'q."
     await _edit_or_answer(query, f"✅ «{title}» o'chirildi.\n\n{list_text}", vacancy_admin_list_kb(vacs))
-
-
-# ─────────────────────────── Questions menu ─────────────────────────
-
-@router.callback_query(F.data == "adm:q", AdminFilter())
-async def adm_q_menu(query: CallbackQuery, state: FSMContext) -> None:
-    await query.answer()
-    r = await db.execute(select(Vacancy).order_by(Vacancy.sort_order, Vacancy.id))
-    vacs = list(r.scalars().all())
-    if not vacs:
-        await _edit_or_answer(query, "⚠️ Avval vakansiya qo'shing.")
-        return
-    await _edit_or_answer(query, "❓ Savollar uchun vakansiyani tanlang:", vacancies_pick_kb(vacs, "admq"))
-
-
-@router.callback_query(F.data.startswith("admq:"), AdminFilter())
-async def adm_q_vacancy(query: CallbackQuery, state: FSMContext) -> None:
-    await query.answer()
-    raw = query.data or ""
-    if raw == "admq:back":
-        lang = await _admin_lang(query.from_user.id if query.from_user else None)
-        await _edit_or_answer(query, "🛠 <b>Admin panel</b>", admin_main_kb(lang))
-        return
-    try:
-        vid = int(raw.split(":", 1)[1])
-    except (ValueError, IndexError):
-        return
-
-    v = await Vacancy.get_or_none(vid)
-    if not v:
-        await query.message.answer("⚠️ Vakansiya topilmadi.")
-        return
-
-    r = await db.execute(
-        select(Question).where(Question.vacancy_id == vid).order_by(Question.sort_order, Question.id)
-    )
-    qs = list(r.scalars().all())
-    lines = [
-        f"{q.id}. [{q.sort_order}] 📝 {q.text[:80]}{'…' if len(q.text) > 80 else ''}"
-        for q in qs
-    ]
-    text = f"💼 <b>{v.title}</b>\n\n❓ Savollar:\n" + ("\n".join(lines) if lines else "— hozircha yo'q")
-
-    b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="➕ Savol qo'shish", callback_data=f"adqq:{vid}"))
-    for q in qs:
-        b.row(InlineKeyboardButton(text=f"📝 #{q.id} — {q.text[:28]}", callback_data=f"adqe:{q.id}"))
-    b.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data=f"admve:{vid}"))
-    await _edit_or_answer(query, text, b.as_markup())
-
-
-# ─────────────────────────── Question add ───────────────────────────
-
-@router.callback_query(F.data.startswith("adqq:"), AdminFilter())
-async def adm_q_add_start(query: CallbackQuery, state: FSMContext) -> None:
-    await query.answer()
-    try:
-        vid = int((query.data or "").split(":", 1)[1])
-    except (ValueError, IndexError):
-        return
-    await state.set_state(AdminQuestionSG.enter_text)
-    await _send_prompt_from_query_and_track(
-        state,
-        query,
-        "✏️ Savol matnini yozing.\nFormat: RU / UZ",
-        reply_markup=_back_kb(f"admback:q_list:{vid}"),
-    )
-    await state.update_data(vacancy_id=vid)
-
-
-@router.message(AdminQuestionSG.enter_text, AdminFilter(), F.text)
-async def adm_q_enter_text(message: Message, state: FSMContext) -> None:
-    data = await state.get_data()
-    edit_qid = data.get("edit_question_id")
-    text = (message.text or "").strip()
-    if not text:
-        await message.answer("⚠️ Matn bo'sh bo'lmasligi kerak.")
-        return
-
-    await _delete_msg(message.bot, message.chat.id, data.get("prompt_msg_id"))
-    try:
-        await message.delete()
-    except Exception:
-        pass
-
-    if edit_qid:
-        t_ru, t_uz = _split_bilingual(text)
-        await Question.update(edit_qid, text=t_ru, text_ru=t_ru, text_uz=t_uz, require_photo=False)
-        await state.clear()
-        await message.answer("✅ Savol matni yangilandi.")
-        return
-
-    t_ru, t_uz = _split_bilingual(text)
-    data = await state.get_data()
-    vid = data.get("vacancy_id")
-    if not vid:
-        await message.answer("⚠️ Sessiya tugadi. Qaytadan boshlang.")
-        await state.clear()
-        return
-    r = await db.execute(
-        select(func.coalesce(func.max(Question.sort_order), 0)).where(Question.vacancy_id == vid)
-    )
-    mx = int(r.scalar() or 0)
-    await Question.create(
-        vacancy_id=vid,
-        text=t_ru,
-        text_ru=t_ru,
-        text_uz=t_uz or t_ru,
-        sort_order=mx + 1,
-        require_photo=False,
-    )
-    await state.clear()
-    await message.answer("✅ Savol qo'shildi.")
-
-
-# ─────────────────────────── Question edit ──────────────────────────
-
-@router.callback_query(F.data.startswith("adqe:"), AdminFilter())
-async def adm_q_edit_menu(query: CallbackQuery, state: FSMContext) -> None:
-    await query.answer()
-    try:
-        qid = int((query.data or "").split(":", 1)[1])
-    except (ValueError, IndexError):
-        return
-    q = await Question.get_or_none(qid)
-    if not q:
-        await query.message.answer("⚠️ Savol topilmadi.")
-        return
-    v = await Vacancy.get_or_none(q.vacancy_id)
-
-    b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="✏️ Matnni o'zgartirish",      callback_data=f"adqt:{qid}"))
-    b.row(InlineKeyboardButton(text="🗑 O'chirish",                 callback_data=f"adqd:{qid}"))
-    b.row(InlineKeyboardButton(text="⬅️ Orqaga",                   callback_data=f"admq:{q.vacancy_id}"))
-
-    title = v.title if v else str(q.vacancy_id)
-    await _edit_or_answer(
-        query,
-        f"💼 {title}\n\n❓ Savol:\n{q.text}",
-        b.as_markup(),
-    )
-
-
-@router.callback_query(F.data.startswith("adqt:"), AdminFilter())
-async def adm_q_edit_text_start(query: CallbackQuery, state: FSMContext) -> None:
-    await query.answer()
-    try:
-        qid = int((query.data or "").split(":", 1)[1])
-    except (ValueError, IndexError):
-        return
-    await state.set_state(AdminQuestionSG.enter_text)
-    await _send_prompt_from_query_and_track(
-        state,
-        query,
-        "✏️ Savolning yangi matnini yozing.\nFormat: RU / UZ",
-        reply_markup=_back_kb(f"admback:q_edit:{qid}"),
-    )
-    await state.update_data(edit_question_id=qid)
-
-
-@router.callback_query(F.data.startswith("adqd:"), AdminFilter())
-async def adm_q_delete(query: CallbackQuery, state: FSMContext) -> None:
-    await query.answer()
-    try:
-        qid = int((query.data or "").split(":", 1)[1])
-    except (ValueError, IndexError):
-        return
-    q = await Question.get_or_none(qid)
-    vid = q.vacancy_id if q else None
-    await Question.delete(qid)
-    await _edit_or_answer(query, "🗑 Savol o'chirildi.")
 
 
 @router.callback_query(F.data.startswith("admback:"), AdminFilter())
@@ -677,58 +501,6 @@ async def admin_back(query: CallbackQuery, state: FSMContext) -> None:
             return
         text, is_active = await _vacancy_edit_text(vid)
         await _edit_or_answer(query, text, vacancy_edit_kb(vid, is_active))
-        return
-    if raw.startswith("admback:q_list:"):
-        try:
-            vid = int(raw.split(":", 2)[2])
-        except (ValueError, IndexError):
-            lang = await _admin_lang(query.from_user.id if query.from_user else None)
-            await _edit_or_answer(query, "🛠 <b>Admin panel</b>", admin_main_kb(lang))
-            return
-        v = await Vacancy.get_or_none(vid)
-        if not v:
-            lang = await _admin_lang(query.from_user.id if query.from_user else None)
-            await _edit_or_answer(query, "⚠️ Vakansiya topilmadi.", admin_main_kb(lang))
-            return
-        r = await db.execute(
-            select(Question).where(Question.vacancy_id == vid).order_by(Question.sort_order, Question.id)
-        )
-        qs = list(r.scalars().all())
-        lines = [
-            f"{q.id}. [{q.sort_order}] 📝 {q.text[:80]}{'…' if len(q.text) > 80 else ''}"
-            for q in qs
-        ]
-        text = f"💼 <b>{v.title}</b>\n\n❓ Savollar:\n" + ("\n".join(lines) if lines else "— hozircha yo'q")
-        b = InlineKeyboardBuilder()
-        b.row(InlineKeyboardButton(text="➕ Savol qo'shish", callback_data=f"adqq:{vid}"))
-        for q in qs:
-            b.row(InlineKeyboardButton(text=f"📝 #{q.id} — {q.text[:28]}", callback_data=f"adqe:{q.id}"))
-        b.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data=f"admve:{vid}"))
-        await _edit_or_answer(query, text, b.as_markup())
-        return
-    if raw.startswith("admback:q_edit:"):
-        try:
-            qid = int(raw.split(":", 2)[2])
-        except (ValueError, IndexError):
-            lang = await _admin_lang(query.from_user.id if query.from_user else None)
-            await _edit_or_answer(query, "🛠 <b>Admin panel</b>", admin_main_kb(lang))
-            return
-        q = await Question.get_or_none(qid)
-        if not q:
-            lang = await _admin_lang(query.from_user.id if query.from_user else None)
-            await _edit_or_answer(query, "⚠️ Savol topilmadi.", admin_main_kb(lang))
-            return
-        v = await Vacancy.get_or_none(q.vacancy_id)
-        b = InlineKeyboardBuilder()
-        b.row(InlineKeyboardButton(text="✏️ Matnni o'zgartirish",      callback_data=f"adqt:{qid}"))
-        b.row(InlineKeyboardButton(text="🗑 O'chirish",                 callback_data=f"adqd:{qid}"))
-        b.row(InlineKeyboardButton(text="⬅️ Orqaga",                   callback_data=f"admq:{q.vacancy_id}"))
-        title = v.title if v else str(q.vacancy_id)
-        await _edit_or_answer(
-            query,
-            f"💼 {title}\n\n❓ Savol:\n{q.text}",
-            b.as_markup(),
-        )
         return
     if raw == "admback:faq_list":
         r = await db.execute(select(Faq).order_by(Faq.sort_order, Faq.id))
