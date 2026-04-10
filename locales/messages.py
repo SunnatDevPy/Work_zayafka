@@ -90,7 +90,10 @@ _UI: dict[str, dict[str, str]] = {
         "hr_pay_q": "💸 Как тебе комфортнее выстроить формат оплаты?",
         "hr_pay_salary": "Фикс. оклад в месяц",
         "hr_pay_piece": "Сдельно (за 1 сценарий)",
-        "hr_income_q": "💰 Напиши свои финансовые ожидания в цифрах исходя из выбранного формата оплаты.",
+        "hr_income_q": (
+            "💰 Напиши свои финансовые ожидания в цифрах исходя из выбранного формата оплаты.\n\n"
+            "<i>Пример: 2 000 000 сум</i>"
+        ),
         "hr_resume_q": "📄 Пришли ссылку на свое резюме (Google Docs, hh.ru) или загрузи файл (PDF/Word).",
         "hr_portfolio_q": "🎬 А теперь самое главное для сценариста — портфолио! Пришли ссылку на твои лучшие работы.",
         "hr_photo_q": "📸 И последнее: отправь, пожалуйста, свою фотографию.",
@@ -196,7 +199,10 @@ _UI: dict[str, dict[str, str]] = {
         "hr_pay_q": "💸 To'lov formatini qanday qulay deb bilasiz?",
         "hr_pay_salary": "Oylik fiks maosh",
         "hr_pay_piece": "Ssenariy bo'yicha (dona)",
-        "hr_income_q": "💰 Tanlangan formatga ko'ra moliyaviy kutuvingizni raqamda yozing.",
+        "hr_income_q": (
+            "💰 Tanlangan formatga ko'ra moliyaviy kutuvingizni raqamda yozing.\n\n"
+            "<i>Misol: 2 000 000 so'm</i>"
+        ),
         "hr_resume_q": "📄 Rezyume havolasini yuboring (Google Docs, hh.ru) yoki PDF/Word fayl yuklang.",
         "hr_portfolio_q": "🎬 Ssenarist uchun eng muhimi — portfolio! Eng yaxshi ishlaringiz havolasini yuboring.",
         "hr_photo_q": "📸 Oxirgi qadam: iltimos, o'z rasmingizni yuboring.",

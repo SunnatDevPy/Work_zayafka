@@ -519,6 +519,41 @@ async def _send_hr_test_step(message: Message, state: FSMContext) -> None:
     )
 
 
+_HR_STOP_STATES = (
+    HRCandidateReviewState.waiting,
+    HRCandidateState.waiting_name,
+    HRCandidateState.waiting_phone,
+    HRCandidateState.waiting_city,
+    HRCandidateState.waiting_employment,
+    HRCandidateState.waiting_payment,
+    HRCandidateState.waiting_income,
+    HRCandidateState.waiting_resume,
+    HRCandidateState.waiting_portfolio,
+    HRCandidateState.waiting_photo,
+    HRCandidateState.waiting_test_choice,
+    HRCandidateState.waiting_test_submit,
+)
+
+
+@router.message(
+    StateFilter(*_HR_STOP_STATES),
+    F.text.in_(all_labels("btn_stop_form")),
+)
+@router.message(
+    StateFilter(*_HR_STOP_STATES),
+    Command("cancel"),
+)
+async def stop_any_fsm(message: Message, state: FSMContext) -> None:
+    if message.from_user:
+        _cancel_reminder(message.from_user.id)
+    await _delete_prompt_message(message.bot, message.chat.id, state)
+    data = await state.get_data()
+    _cleanup_pdf(data.get("hr_review_pdf_path"))
+    lang = data.get("ui_lang") or (await _user_lang(message.from_user.id if message.from_user else 0))
+    await state.clear()
+    await message.answer(msg(lang, "answer_stop"), reply_markup=_main_kb(lang))
+
+
 @router.callback_query(F.data.startswith("hrapply:"))
 async def cb_hr_apply(query: CallbackQuery, state: FSMContext) -> None:
     await query.answer()
@@ -822,48 +857,3 @@ async def cb_vacancy_pick(query: CallbackQuery, state: FSMContext) -> None:
     except TelegramBadRequest:
         pass
     await query.message.answer(msg(lang, "hr_pd_text"), reply_markup=hr_pd_consent_kb(vid, lang))
-
-
-@router.message(
-    StateFilter(
-        HRCandidateReviewState.waiting,
-        HRCandidateState.waiting_name,
-        HRCandidateState.waiting_phone,
-        HRCandidateState.waiting_city,
-        HRCandidateState.waiting_employment,
-        HRCandidateState.waiting_payment,
-        HRCandidateState.waiting_income,
-        HRCandidateState.waiting_resume,
-        HRCandidateState.waiting_portfolio,
-        HRCandidateState.waiting_photo,
-        HRCandidateState.waiting_test_choice,
-        HRCandidateState.waiting_test_submit,
-    ),
-    F.text.in_(all_labels("btn_stop_form")),
-)
-@router.message(
-    StateFilter(
-        HRCandidateReviewState.waiting,
-        HRCandidateState.waiting_name,
-        HRCandidateState.waiting_phone,
-        HRCandidateState.waiting_city,
-        HRCandidateState.waiting_employment,
-        HRCandidateState.waiting_payment,
-        HRCandidateState.waiting_income,
-        HRCandidateState.waiting_resume,
-        HRCandidateState.waiting_portfolio,
-        HRCandidateState.waiting_photo,
-        HRCandidateState.waiting_test_choice,
-        HRCandidateState.waiting_test_submit,
-    ),
-    Command("cancel"),
-)
-async def stop_any_fsm(message: Message, state: FSMContext) -> None:
-    if message.from_user:
-        _cancel_reminder(message.from_user.id)
-    await _delete_prompt_message(message.bot, message.chat.id, state)
-    data = await state.get_data()
-    _cleanup_pdf(data.get("hr_review_pdf_path"))
-    lang = data.get("ui_lang") or (await _user_lang(message.from_user.id if message.from_user else 0))
-    await state.clear()
-    await message.answer(msg(lang, "answer_stop"), reply_markup=_main_kb(lang))
