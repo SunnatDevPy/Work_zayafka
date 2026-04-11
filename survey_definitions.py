@@ -249,7 +249,6 @@ SURVEY_ITEMS: list[SurveyItem] = [
             "🎞️ <b>Мини-сценарий</b>\n\n"
             "Напишите <b>краткий сценарий до 30 секунд</b> на тему:\n"
             "«Почему стоит выбрать нашу компанию».\n\n"
-            "🌟 Можно кадры, реплики, музыкальное настроение — как удобно.\n\n"
             "✏️ Текстом ниже ↓"
         ),
         "ask_uz": (
@@ -258,7 +257,6 @@ SURVEY_ITEMS: list[SurveyItem] = [
             "🎞️ <b>Mini-ssenariy</b>\n\n"
             "<b>30 soniyagacha</b> qisqa ssenariy yozing:\n"
             "«Nima uchun kompaniyamizni tanlash kerak».\n\n"
-            "🌟 Kadr, replika, kayfiyat — ixtiyoriy.\n\n"
             "✏️ Matn bilan ↓"
         ),
     },
