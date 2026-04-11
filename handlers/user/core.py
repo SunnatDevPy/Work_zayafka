@@ -12,6 +12,7 @@ from aiogram.types import (
     KeyboardButton,
     Message,
     ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
 )
 from sqlalchemy import select
 
@@ -155,11 +156,15 @@ async def _send_survey_question(message: Message, state: FSMContext) -> None:
     if item["kind"] == "phone":
         await message.answer(text, reply_markup=_phone_kb(lang))
     elif item["kind"] == "city":
-        await message.answer(text, reply_markup=hr_city_kb(lang))
+        # Reply va inline bir xabarda bo‘lmasligi mumkin: avval «To‘xtatish», keyin inline — kontakt yo‘qoladi.
+        await message.answer(text, reply_markup=_stop_kb(lang))
+        await message.answer(msg(lang, "hr_use_inline_hint"), reply_markup=hr_city_kb(lang))
     elif item["kind"] == "employment":
-        await message.answer(text, reply_markup=hr_employment_kb(lang))
+        await message.answer(text, reply_markup=_stop_kb(lang))
+        await message.answer(msg(lang, "hr_use_inline_hint"), reply_markup=hr_employment_kb(lang))
     elif item["kind"] == "payment":
-        await message.answer(text, reply_markup=hr_payment_kb(lang))
+        await message.answer(text, reply_markup=_stop_kb(lang))
+        await message.answer(msg(lang, "hr_use_inline_hint"), reply_markup=hr_payment_kb(lang))
     else:
         await message.answer(text, reply_markup=_stop_kb(lang))
 
@@ -237,11 +242,15 @@ async def _prepare_hr_review(message: Message, state: FSMContext) -> None:
 
     await state.update_data(hr_review_pdf_path=pdf_path, full_name=full_name)
     await state.set_state(HRCandidateReviewState.waiting)
-    await message.answer_document(
+    sent = await message.answer_document(
         document=BufferedInputFile(pdf_bytes, filename=_hr_candidate_pdf_filename(full_name)),
         caption=msg(lang, "review_caption"),
-        reply_markup=hr_review_kb(lang),
+        reply_markup=ReplyKeyboardRemove(),
     )
+    try:
+        await sent.edit_reply_markup(reply_markup=hr_review_kb(lang))
+    except TelegramBadRequest:
+        await message.answer(msg(lang, "hr_review_hint"), reply_markup=hr_review_kb(lang))
 
 
 _HR_STOP_STATES = (

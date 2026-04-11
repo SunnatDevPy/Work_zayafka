@@ -8,8 +8,8 @@ from models.vacancy import Vacancy
 def language_pick_kb() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang:ru", style="danger"),
         InlineKeyboardButton(text="🇺🇿 O‘zbekcha", callback_data="lang:uz", style="success"),
+        InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang:ru", style="danger"),
     )
     return b.as_markup()
 
