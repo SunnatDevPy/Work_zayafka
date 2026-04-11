@@ -205,12 +205,23 @@ def build_fake_pdf(*, out_path: str | None = None) -> str:
     )
 
 
+def _cell_multiline(val: str, font: str, size: int = 7):
+    raw = val if val else "—"
+    parts = raw.split("\n")
+    safe = "<br/>".join(escape(p) for p in parts)[:12000]
+    return _p(safe, font, size)
+
+
 def build_candidate_compact_pdf(
     vacancy_title: str,
     applicant_label: str,
     rows: list[tuple[str, str]],
     out_path: str | None = None,
     photo_path: str | None = None,
+    *,
+    photo_caption: str | None = None,
+    col_field: str = "Поле",
+    col_value: str = "Значение",
 ) -> str:
     font, bold = _fonts()
     if not out_path:
@@ -226,13 +237,17 @@ def build_candidate_compact_pdf(
         bottomMargin=1.0 * cm,
     )
 
-    table_data = [[_p("<b>Поле</b>", bold, 8), _p("<b>Значение</b>", bold, 8)]]
+    table_data = [[_p(f"<b>{escape(col_field)}</b>", bold, 8), _p(f"<b>{escape(col_value)}</b>", bold, 8)]]
     for key, value in rows:
-        safe_val = escape((value or "—").replace("\n", " "))[:380]
-        table_data.append([_p(f"<b>{escape(key)}</b>", bold, 7), _p(safe_val, font, 7)])
+        table_data.append(
+            [_p(f"<b>{escape(key)}</b>", bold, 7), _cell_multiline(value, font, 7)]
+        )
 
     story = [_header(vacancy_title, applicant_label, font, bold), Spacer(1, 6)]
     if photo_path and os.path.exists(photo_path):
+        if photo_caption and str(photo_caption).strip():
+            story.append(_p(f"<b>{escape(str(photo_caption).strip())}</b>", bold, 9))
+            story.append(Spacer(1, 4))
         pic = _photo(photo_path, 4.2 * cm, max_height=5 * cm)
         story.append(
             Table(

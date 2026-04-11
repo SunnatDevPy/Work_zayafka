@@ -50,21 +50,10 @@ class AsyncDatabaseSession:
 
             required = [
                 ("bot_users", "locale", "VARCHAR(8)"),
-                ("vacancies", "test_task_text", "TEXT"),
-                ("vacancies", "test_task_file_id", "VARCHAR(255)"),
-                ("vacancies", "test_task_file_name", "VARCHAR(255)"),
                 ("vacancies", "title_ru", "VARCHAR(255)"),
                 ("vacancies", "title_uz", "VARCHAR(255)"),
                 ("vacancies", "description_ru", "TEXT"),
                 ("vacancies", "description_uz", "TEXT"),
-                ("vacancies", "test_task_text_ru", "TEXT"),
-                ("vacancies", "test_task_text_uz", "TEXT"),
-                ("questions", "text_ru", "TEXT"),
-                ("questions", "text_uz", "TEXT"),
-                ("faqs", "question_ru", "TEXT"),
-                ("faqs", "question_uz", "TEXT"),
-                ("faqs", "answer_ru", "TEXT"),
-                ("faqs", "answer_uz", "TEXT"),
             ]
             missing: list[tuple[str, str, str]] = []
             for table_name, column_name, ddl_type in required:

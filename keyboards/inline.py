@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from locales.messages import LANG_UZ, norm_lang, msg
+from locales.messages import LANG_RU, LANG_UZ, norm_lang, msg
 from models.vacancy import Vacancy
 
 
@@ -74,6 +74,7 @@ def hr_employment_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text=msg(lg, "hr_emp_full"), callback_data="hremp:full"),
         InlineKeyboardButton(text=msg(lg, "hr_emp_part"), callback_data="hremp:part"),
     )
+    b.row(InlineKeyboardButton(text=msg(lg, "hr_emp_project"), callback_data="hremp:project"))
     return b.as_markup()
 
 
@@ -81,29 +82,56 @@ def hr_payment_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
     lg = norm_lang(lang)
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text=msg(lg, "hr_pay_salary"), callback_data="hrpay:salary"),
-        InlineKeyboardButton(text=msg(lg, "hr_pay_piece"), callback_data="hrpay:piece"),
+        InlineKeyboardButton(text=msg(lg, "hr_pay_fixed"), callback_data="hrpay:fixed"),
+        InlineKeyboardButton(text=msg(lg, "hr_pay_scenario"), callback_data="hrpay:scenario"),
     )
     return b.as_markup()
 
 
-def hr_city_kb() -> InlineKeyboardMarkup:
-    cities = [
-        "Toshkent", "Samarqand", "Buxoro",
-        "Andijon", "Farg'ona", "Namangan",
-        "Nukus", "Xiva", "Qarshi",
-        "Termiz", "Jizzax", "Navoiy",
-    ]
+# id в callback — латиница; подпись на кнопке — только язык интерфейса (ru | uz).
+CITY_ROWS: list[tuple[str, str, str]] = [
+    ("Toshkent", "Ташкент", "Toshkent"),
+    ("Samarqand", "Самарканд", "Samarqand"),
+    ("Buxoro", "Бухара", "Buxoro"),
+    ("Andijon", "Андижан", "Andijon"),
+    ("Fargona", "Фергана", "Farg‘ona"),
+    ("Namangan", "Наманган", "Namangan"),
+    ("Nukus", "Нукус", "Nukus"),
+    ("Xiva", "Хива", "Xiva"),
+    ("Qarshi", "Карши", "Qarshi"),
+    ("Termiz", "Термез", "Termiz"),
+    ("Jizzax", "Джизак", "Jizzax"),
+    ("Navoiy", "Навои", "Navoiy"),
+]
+
+
+def city_label_for_lang(city_id: str, lang: str) -> str:
+    lg = norm_lang(lang)
+    for cid, ru, uz in CITY_ROWS:
+        if cid == city_id:
+            return ru if lg == LANG_RU else uz
+    return city_id
+
+
+def city_answer_for_pdf(city_id: str, lang: str) -> str:
+    return city_label_for_lang(city_id, lang)
+
+
+def hr_city_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    lg = norm_lang(lang)
     b = InlineKeyboardBuilder()
-    for i in range(0, len(cities), 2):
-        right = cities[i + 1] if i + 1 < len(cities) else None
-        if right:
+    for i in range(0, len(CITY_ROWS), 2):
+        left_id, left_ru, left_uz = CITY_ROWS[i]
+        left_lbl = left_ru if lg == LANG_RU else left_uz
+        if i + 1 < len(CITY_ROWS):
+            right_id, right_ru, right_uz = CITY_ROWS[i + 1]
+            right_lbl = right_ru if lg == LANG_RU else right_uz
             b.row(
-                InlineKeyboardButton(text=cities[i], callback_data=f"hrcity:{cities[i]}"),
-                InlineKeyboardButton(text=right, callback_data=f"hrcity:{right}"),
+                InlineKeyboardButton(text=left_lbl, callback_data=f"hrcity:{left_id}"),
+                InlineKeyboardButton(text=right_lbl, callback_data=f"hrcity:{right_id}"),
             )
         else:
-            b.row(InlineKeyboardButton(text=cities[i], callback_data=f"hrcity:{cities[i]}"))
+            b.row(InlineKeyboardButton(text=left_lbl, callback_data=f"hrcity:{left_id}"))
     return b.as_markup()
 
 
@@ -129,11 +157,10 @@ def hr_review_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
 
 
 def admin_main_kb(lang: str = LANG_UZ) -> InlineKeyboardMarkup:
+    del lang
     b = InlineKeyboardBuilder()
     b.row(InlineKeyboardButton(text="💼 Вакансии / Vakansiyalar", callback_data="adm:vac"))
-    b.row(InlineKeyboardButton(text="📋 FAQ управление / FAQ boshqaruvi", callback_data="adm:faq"))
     b.row(InlineKeyboardButton(text="📢 Рассылка / Reklama", callback_data="adm:bc"))
-    b.row(InlineKeyboardButton(text="👥 Пользователи / Foydalanuvchilar", callback_data="adm:users"))
     b.row(InlineKeyboardButton(text="🏠 Меню пользователя / Foydalanuvchi menyusi", callback_data="adm:exit"))
     return b.as_markup()
 
@@ -214,7 +241,12 @@ def vacancy_admin_list_kb(vacancies: list) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     for v in vacancies:
         mark = "✅" if v.is_active else "⏸"
-        b.row(InlineKeyboardButton(text=f"{mark} {v.title}", callback_data=f"admve:{v.id}"))
+        tr = (getattr(v, "title_ru", None) or v.title or "").strip()
+        tu = (getattr(v, "title_uz", None) or v.title or "").strip()
+        label = f"{tr} / {tu}" if tr != tu else (tr or tu or "—")
+        if len(label) > 50:
+            label = label[:47] + "…"
+        b.row(InlineKeyboardButton(text=f"{mark} {label}", callback_data=f"admve:{v.id}"))
     b.row(InlineKeyboardButton(text="➕ Добавить вакансию / Vakansiya qo'shish", callback_data="admva:add"))
     b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data="admback:admin"))
     return b.as_markup()
@@ -224,9 +256,8 @@ def vacancy_edit_kb(vacancy_id: int, is_active: bool) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(InlineKeyboardButton(text="✏️ Название / Nomni o'zgartirish", callback_data=f"advt:{vacancy_id}"))
     b.row(InlineKeyboardButton(text="📝 Описание / Tavsifni o'zgartirish", callback_data=f"advd:{vacancy_id}"))
-    b.row(InlineKeyboardButton(text="🎯 Тест / Test topshiriq", callback_data=f"advtask:{vacancy_id}"))
     toggle = "⏸ Деактивировать / Faolsizlashtirish" if is_active else "✅ Активировать / Faollashtirish"
-    b.row(InlineKeyboardButton(text=toggle,                     callback_data=f"adva:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text=toggle, callback_data=f"adva:{vacancy_id}"))
     b.row(InlineKeyboardButton(text="🗑 Удалить / O'chirish", callback_data=f"advdel:{vacancy_id}"))
     b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data="adm:vac"))
     return b.as_markup()

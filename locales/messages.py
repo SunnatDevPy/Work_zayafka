@@ -80,14 +80,26 @@ _UI: dict[str, dict[str, str]] = {
             "Нажимая кнопку ниже, вы подтверждаете согласие на обработку данных для подбора персонала."
         ),
         "hr_pd_agree_btn": "Согласен",
+        "hr_photo_first_q": (
+            "📸 <b>Сначала отправьте вашу фотографию</b> — она будет в начале PDF-заявки.\n"
+            "Затем ответьте на вопросы анкеты."
+        ),
+        "hr_use_inline_hint": "👇 Для этого вопроса выберите вариант кнопкой ниже.",
+        "pdf_reply_title": "Отклик",
+        "pdf_photo_caption": "Фотография кандидата",
+        "pdf_col_field": "Поле",
+        "pdf_col_value": "Значение",
         "hr_name_q": "✨ Отлично! Давай знакомиться. Напиши свое Имя и Фамилию.",
         "hr_phone_q": "📞 Поделись номером телефона для связи.",
         "hr_phone_btn": "📱 Отправить контакт",
         "hr_city_q": "Из какого ты города? (Нам важно понимать часовой пояс)\nВыбери один из 12 городов кнопкой ниже 👇",
         "hr_emp_q": "🧩 Какой формат занятости ты рассматриваешь?",
-        "hr_emp_full": "Полная (Full-time)",
-        "hr_emp_part": "Частичная / Проектная",
+        "hr_emp_full": "Полная занятость",
+        "hr_emp_part": "Частичная",
+        "hr_emp_project": "Проектная",
         "hr_pay_q": "💸 Как тебе комфортнее выстроить формат оплаты?",
+        "hr_pay_fixed": "Фиксированная оплата",
+        "hr_pay_scenario": "Оплата за сценарий",
         "hr_pay_salary": "Фикс. оклад в месяц",
         "hr_pay_piece": "Сдельно (за 1 сценарий)",
         "hr_income_q": (
@@ -189,14 +201,26 @@ _UI: dict[str, dict[str, str]] = {
             "Quyidagi tugmani bosib, ishga qabul jarayoni uchun ma'lumotlaringizni qayta ishlashga rozilik bildirasiz."
         ),
         "hr_pd_agree_btn": "Roziman",
+        "hr_photo_first_q": (
+            "📸 <b>Avvalo suratingizni yuboring</b> — u PDF-arizaning boshida bo‘ladi.\n"
+            "Keyin savollarga javob berasiz."
+        ),
+        "hr_use_inline_hint": "👇 Bu savol uchun quyidagi tugmalar orqali tanlang.",
+        "pdf_reply_title": "Ariza",
+        "pdf_photo_caption": "Nomzod surati",
+        "pdf_col_field": "Maydon",
+        "pdf_col_value": "Qiymat",
         "hr_name_q": "✨ Ajoyib! Keling, tanishamiz. Ism va familiyangizni yozing.",
         "hr_phone_q": "📞 Bog'lanish uchun telefon raqamingizni yuboring.",
         "hr_phone_btn": "📱 Kontaktni yuborish",
         "hr_city_q": "Qaysi shahardansiz? (Soat mintaqasi muhim)\n12 ta shahardan birini quyidagi tugmalar bilan tanlang 👇",
         "hr_emp_q": "🧩 Qaysi bandlik formatini ko'rib chiqyapsiz?",
-        "hr_emp_full": "To'liq (Full-time)",
-        "hr_emp_part": "Qisman / Loyihaviy",
+        "hr_emp_full": "To‘liq bandlik",
+        "hr_emp_part": "Qisman",
+        "hr_emp_project": "Loyihaviy",
         "hr_pay_q": "💸 To'lov formatini qanday qulay deb bilasiz?",
+        "hr_pay_fixed": "Fiks to‘lov",
+        "hr_pay_scenario": "Ssenariy bo‘yicha to‘lov",
         "hr_pay_salary": "Oylik fiks maosh",
         "hr_pay_piece": "Ssenariy bo'yicha (dona)",
         "hr_income_q": (
@@ -260,7 +284,6 @@ def main_menu_kb(lang: str) -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text=d["btn_company"]), KeyboardButton(text=d["btn_services"])],
             [KeyboardButton(text=d["btn_view"], style="success")],
-            [KeyboardButton(text=d["btn_faq"])],
         ],
         resize_keyboard=True,
     )

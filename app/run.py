@@ -1,7 +1,7 @@
 import logging
 
 from config import conf
-from models import BotUser, Faq, Question, Vacancy  # noqa: F401
+from models import BotUser, Vacancy  # noqa: F401
 from models.database import db
 
 from app.factory import create_bot, create_dispatcher, include_routers, setup_commands

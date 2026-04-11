@@ -1,4 +1,3 @@
-import asyncio
 import os
 import tempfile
 
@@ -11,7 +10,6 @@ from aiogram.types import (
     BufferedInputFile,
     CallbackQuery,
     KeyboardButton,
-    ReplyKeyboardRemove,
     Message,
     ReplyKeyboardMarkup,
 )
@@ -20,12 +18,12 @@ from sqlalchemy import select
 from config import conf
 from keyboards.inline import (
     channel_application_kb,
+    city_answer_for_pdf,
     hr_city_kb,
     hr_employment_kb,
     hr_payment_kb,
     hr_pd_consent_kb,
     hr_review_kb,
-    hr_test_choice_kb,
     language_pick_kb,
     vacancies_kb,
     vacancy_view_detail_kb,
@@ -35,63 +33,19 @@ from locales.messages import LANG_UZ, all_labels, main_menu_kb, msg, norm_lang, 
 from models.database import db
 from models.vacancy import Vacancy
 from services.pdf import build_candidate_compact_pdf
+from survey_definitions import SURVEY_ITEMS, survey_ask_html, survey_pdf_label
 from utils.user_locale import ensure_bot_user, get_user_locale, set_user_locale
 
 router = Router(name="user")
 
 
 class HRCandidateState(StatesGroup):
-    waiting_name = State()
-    waiting_phone = State()
-    waiting_city = State()
-    waiting_employment = State()
-    waiting_payment = State()
-    waiting_income = State()
-    waiting_resume = State()
-    waiting_portfolio = State()
     waiting_photo = State()
-    waiting_test_choice = State()
-    waiting_test_submit = State()
+    waiting_survey = State()
 
 
 class HRCandidateReviewState(StatesGroup):
     waiting = State()
-
-
-_reminder_tasks: dict[int, asyncio.Task] = {}
-
-
-async def _delete_prompt_message(bot, chat_id: int, state: FSMContext) -> None:
-    data = await state.get_data()
-    mid = data.get("bot_prompt_msg_id")
-    if not mid:
-        return
-    try:
-        await bot.delete_message(chat_id, mid)
-    except Exception:
-        pass
-    await state.update_data(bot_prompt_msg_id=None)
-
-
-async def _send_prompt(bot, chat_id: int, state: FSMContext, text: str, reply_markup=None):
-    await _delete_prompt_message(bot, chat_id, state)
-    sent = await bot.send_message(chat_id, text, reply_markup=reply_markup)
-    await state.update_data(bot_prompt_msg_id=sent.message_id)
-    return sent
-
-
-def _is_url(text: str | None) -> bool:
-    if not text:
-        return False
-    t = text.strip().lower()
-    return t.startswith("http://") or t.startswith("https://")
-
-
-def _allowed_doc_name(filename: str | None) -> bool:
-    if not filename:
-        return False
-    name = filename.lower()
-    return name.endswith(".pdf") or name.endswith(".doc") or name.endswith(".docx")
 
 
 def _hr_candidate_pdf_filename(full_name: str | None) -> str:
@@ -125,33 +79,7 @@ def _stop_kb(lang: str) -> ReplyKeyboardMarkup:
     )
 
 
-def _cancel_reminder(user_id: int) -> None:
-    task = _reminder_tasks.pop(user_id, None)
-    if task and not task.done():
-        task.cancel()
-
-
-async def _schedule_reminder(user_id: int, chat_id: int, bot, lang: str) -> None:
-    _cancel_reminder(user_id)
-
-    async def _job() -> None:
-        try:
-            await asyncio.sleep(24 * 60 * 60)
-            await bot.send_message(
-                chat_id,
-                f"⏰ {msg(lang, 'hr_test_reminder')}",
-                reply_markup=hr_test_choice_kb(lang),
-            )
-        except asyncio.CancelledError:
-            return
-        finally:
-            _reminder_tasks.pop(user_id, None)
-
-    _reminder_tasks[user_id] = asyncio.create_task(_job())
-
-
 def _main_kb(lang: str) -> ReplyKeyboardMarkup:
-    """Главное меню по языку (используется после форм и сценария)."""
     return main_menu_kb(lang)
 
 
@@ -161,7 +89,6 @@ async def _user_lang(telegram_id: int) -> str:
 
 
 async def _require_language_or_hint(message: Message) -> str | None:
-    """Если язык не выбран — показываем клавиатуру, возвращаем None."""
     if not message.from_user:
         return None
     loc = await get_user_locale(message.from_user.id)
@@ -175,8 +102,8 @@ def _bilingual_value(obj, lang: str, base: str) -> str | None:
     ru = getattr(obj, f"{base}_ru", None)
     uz = getattr(obj, f"{base}_uz", None)
     if norm_lang(lang) == "ru":
-        return (ru or uz or getattr(obj, base, None))
-    return (uz or ru or getattr(obj, base, None))
+        return ru or uz or getattr(obj, base, None)
+    return uz or ru or getattr(obj, base, None)
 
 
 async def _show_vacancy_card(message: Message, vacancy_id: int, lang: str) -> None:
@@ -201,7 +128,7 @@ def _parse_start_vacancy_id(raw_text: str | None) -> int | None:
     payload = parts[1].strip().lower()
     for prefix in ("vac_", "vacancy_", "vac:", "vview:"):
         if payload.startswith(prefix):
-            payload = payload[len(prefix):]
+            payload = payload[len(prefix) :]
             break
     try:
         return int(payload)
@@ -217,7 +144,111 @@ def _cleanup_pdf(pdf_path: str | None) -> None:
             pass
 
 
-# ── Язык ────────────────────────────────────────────────────────────
+async def _send_survey_question(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    step: int = data.get("survey_step") or 1
+    lang = data.get("ui_lang", LANG_UZ)
+    if step < 1 or step > len(SURVEY_ITEMS):
+        return
+    item = SURVEY_ITEMS[step - 1]
+    text = survey_ask_html(item, lang)
+    if item["kind"] == "phone":
+        await message.answer(text, reply_markup=_phone_kb(lang))
+    elif item["kind"] == "city":
+        await message.answer(text, reply_markup=hr_city_kb(lang))
+    elif item["kind"] == "employment":
+        await message.answer(text, reply_markup=hr_employment_kb(lang))
+    elif item["kind"] == "payment":
+        await message.answer(text, reply_markup=hr_payment_kb(lang))
+    else:
+        await message.answer(text, reply_markup=_stop_kb(lang))
+
+
+async def _advance_survey(message: Message, state: FSMContext, answer: str) -> None:
+    data = await state.get_data()
+    step: int = data.get("survey_step") or 1
+    lang = data.get("ui_lang", LANG_UZ)
+    answers = list(data.get("survey_answers") or [])
+    if len(answers) != step - 1:
+        answers = answers[: max(0, step - 1)]
+    answers.append(answer)
+    await state.update_data(survey_answers=answers)
+    if step >= len(SURVEY_ITEMS):
+        await _prepare_hr_review(message, state)
+        return
+    await state.update_data(survey_step=step + 1)
+    await _send_survey_question(message, state)
+
+
+async def _prepare_hr_review(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    user = message.from_user
+    bot = message.bot
+    lang = data.get("ui_lang", LANG_UZ)
+    if not user:
+        await state.clear()
+        return
+
+    answers: list[str] = list(data.get("survey_answers") or [])
+    full_name = answers[0] if answers else None
+    username = f"@{user.username}" if user.username else "—"
+    applicant_label = f"{full_name or '—'} ({username}) id:{user.id}"
+
+    rows: list[tuple[str, str]] = []
+    for i, item in enumerate(SURVEY_ITEMS):
+        label = survey_pdf_label(item, lang)
+        val = answers[i] if i < len(answers) else "—"
+        rows.append((label, val))
+
+    user_photo_path: str | None = None
+    if data.get("candidate_photo_id"):
+        try:
+            fd, user_photo_path = tempfile.mkstemp(suffix=".jpg")
+            os.close(fd)
+            await bot.download(data["candidate_photo_id"], destination=user_photo_path)
+        except Exception:
+            _cleanup_pdf(user_photo_path)
+            user_photo_path = None
+
+    pdf_path: str | None = None
+    pdf_bytes: bytes | None = None
+    try:
+        pdf_path = build_candidate_compact_pdf(
+            vacancy_title=f"{msg(lang, 'pdf_reply_title')}: {data.get('vacancy_title', '—')}",
+            applicant_label=applicant_label,
+            rows=rows,
+            photo_path=user_photo_path,
+            photo_caption=msg(lang, "pdf_photo_caption"),
+            col_field=msg(lang, "pdf_col_field"),
+            col_value=msg(lang, "pdf_col_value"),
+        )
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+    except Exception:
+        pdf_path = None
+        pdf_bytes = None
+    finally:
+        if user_photo_path:
+            _cleanup_pdf(user_photo_path)
+
+    if not pdf_bytes or not pdf_path:
+        await message.answer(msg(lang, "hr_pdf_error"), reply_markup=_stop_kb(lang))
+        return
+
+    await state.update_data(hr_review_pdf_path=pdf_path, full_name=full_name)
+    await state.set_state(HRCandidateReviewState.waiting)
+    await message.answer_document(
+        document=BufferedInputFile(pdf_bytes, filename=_hr_candidate_pdf_filename(full_name)),
+        caption=msg(lang, "review_caption"),
+        reply_markup=hr_review_kb(lang),
+    )
+
+
+_HR_STOP_STATES = (
+    HRCandidateReviewState.waiting,
+    HRCandidateState.waiting_photo,
+    HRCandidateState.waiting_survey,
+)
 
 
 @router.callback_query(F.data.startswith("lang:"))
@@ -253,8 +284,6 @@ async def cmd_lang(message: Message, state: FSMContext) -> None:
     await message.answer(pick_language_prompt(), reply_markup=language_pick_kb())
 
 
-# ─────────────────────────── HR review callbacks ────────────────────
-
 @router.callback_query(F.data == "hrrev:ok", HRCandidateReviewState.waiting)
 async def hr_review_confirm(query: CallbackQuery, state: FSMContext) -> None:
     await query.answer()
@@ -267,7 +296,7 @@ async def hr_review_confirm(query: CallbackQuery, state: FSMContext) -> None:
         return
 
     username = f"@{user.username}" if user.username else "без username"
-    vac_title = data.get("vacancy_title", "Сценарист")
+    vac_title = data.get("vacancy_title", "—")
     full_name = data.get("full_name") or "—"
     cap = (
         f"⚡️ <b>{vac_title}</b>\n"
@@ -298,7 +327,6 @@ async def hr_review_confirm(query: CallbackQuery, state: FSMContext) -> None:
             pass
 
     _cleanup_pdf(pdf_path)
-    _cancel_reminder(user.id)
     await state.clear()
 
     try:
@@ -315,7 +343,6 @@ async def hr_review_redo(query: CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
     lang = data.get("ui_lang", LANG_UZ)
     _cleanup_pdf(data.get("hr_review_pdf_path"))
-    _cancel_reminder(query.from_user.id if query.from_user else 0)
     await state.clear()
 
     try:
@@ -331,8 +358,6 @@ async def hr_review_wrong_input(message: Message, state: FSMContext) -> None:
     lang = (await state.get_data()).get("ui_lang", LANG_UZ)
     await message.answer(msg(lang, "hr_review_hint"))
 
-
-# ─────────────────────────── /start ─────────────────────────────────
 
 @router.message(StateFilter("*"), CommandStart())
 async def cmd_start(message: Message, state: FSMContext) -> None:
@@ -365,8 +390,6 @@ async def menu_services(message: Message) -> None:
         return
     await message.answer(msg(lang, "services_dev"))
 
-
-# ─────────────────────────── Vacancy view (client) ──────────────────
 
 @router.message(F.text.in_(all_labels("btn_view")))
 async def menu_view_vacancies(message: Message, state: FSMContext) -> None:
@@ -418,121 +441,11 @@ async def cb_vacancy_view(query: CallbackQuery, state: FSMContext) -> None:
 
     desc = (_bilingual_value(v, lang, "description") or "").strip() or msg(lang, "vac_desc_none")
     title = (_bilingual_value(v, lang, "title") or v.title).strip()
-    text = msg(
-        lang,
-        "vac_card",
-        title=title,
-        desc=desc,
-    )
+    text = msg(lang, "vac_card", title=title, desc=desc)
     try:
         await query.message.edit_text(text, reply_markup=vacancy_view_detail_kb(vid, lang))
     except TelegramBadRequest:
         await query.message.answer(text, reply_markup=vacancy_view_detail_kb(vid, lang))
-
-
-async def _prepare_hr_review(message: Message, state: FSMContext) -> None:
-    """Собрать PDF и показать пользователю подтверждение (отправить / заново) перед каналом."""
-    data = await state.get_data()
-    user = message.from_user
-    bot = message.bot
-    lang = data.get("ui_lang", LANG_UZ)
-    if not user:
-        await state.clear()
-        return
-
-    username = f"@{user.username}" if user.username else "без username"
-    applicant_label = f"{data.get('full_name')} ({username}) id:{user.id}"
-
-    rows: list[tuple[str, str]] = [
-        ("Имя и фамилия", data.get("full_name") or "—"),
-        ("Телефон", data.get("phone") or "—"),
-        ("Город", data.get("city") or "—"),
-        ("Занятость", data.get("employment") or "—"),
-        ("Формат оплаты", data.get("payment") or "—"),
-        ("Ожидания по доходу", data.get("income_expectation") or "—"),
-        ("Резюме", data.get("resume_text") or f"Файл: {data.get('resume_doc_name') or '-'}"),
-        ("Портфолио", data.get("portfolio") or "—"),
-        ("Тестовое", data.get("test_text") or f"Файл: {data.get('test_doc_name') or '-'}"),
-    ]
-
-    user_photo_path: str | None = None
-    if data.get("candidate_photo_id"):
-        try:
-            fd, user_photo_path = tempfile.mkstemp(suffix=".jpg")
-            os.close(fd)
-            await bot.download(data["candidate_photo_id"], destination=user_photo_path)
-        except Exception:
-            _cleanup_pdf(user_photo_path)
-            user_photo_path = None
-
-    pdf_path: str | None = None
-    pdf_bytes: bytes | None = None
-    try:
-        pdf_path = build_candidate_compact_pdf(
-            vacancy_title=f"Отклик: {data.get('vacancy_title', 'Сценарист')}",
-            applicant_label=applicant_label,
-            rows=rows,
-            photo_path=user_photo_path,
-        )
-        with open(pdf_path, "rb") as f:
-            pdf_bytes = f.read()
-    except Exception:
-        pdf_path = None
-        pdf_bytes = None
-    finally:
-        if user_photo_path:
-            _cleanup_pdf(user_photo_path)
-
-    if not pdf_bytes or not pdf_path:
-        await message.answer(msg(lang, "hr_pdf_error"), reply_markup=_stop_kb(lang))
-        return
-
-    await state.update_data(hr_review_pdf_path=pdf_path)
-    await state.set_state(HRCandidateReviewState.waiting)
-    await message.answer_document(
-        document=BufferedInputFile(
-            pdf_bytes, filename=_hr_candidate_pdf_filename(data.get("full_name"))
-        ),
-        caption=msg(lang, "review_caption"),
-        reply_markup=hr_review_kb(lang),
-    )
-
-
-async def _continue_hr_after_test(message: Message, state: FSMContext) -> None:
-    """После тестового — сразу предпросмотр PDF (без доп. вопросов из БД)."""
-    await _prepare_hr_review(message, state)
-
-
-async def _send_hr_test_step(message: Message, state: FSMContext) -> None:
-    """После фото: одно сообщение с заданием «сценарий» и кнопки; PDF после отправки ответа."""
-    data = await state.get_data()
-    lang = data.get("ui_lang", LANG_UZ)
-    chat_id = message.chat.id
-    bot = message.bot
-    await state.update_data(test_text=None, test_doc_id=None, test_doc_name=None)
-    await _send_prompt(
-        bot,
-        chat_id,
-        state,
-        msg(lang, "scenario_task_prompt"),
-        reply_markup=hr_test_choice_kb(lang),
-    )
-
-
-_HR_STOP_STATES = (
-    HRCandidateReviewState.waiting,
-    HRCandidateState.waiting_name,
-    HRCandidateState.waiting_phone,
-    HRCandidateState.waiting_city,
-    HRCandidateState.waiting_employment,
-    HRCandidateState.waiting_payment,
-    HRCandidateState.waiting_income,
-    HRCandidateState.waiting_resume,
-    HRCandidateState.waiting_portfolio,
-    HRCandidateState.waiting_photo,
-    HRCandidateState.waiting_test_choice,
-    HRCandidateState.waiting_test_submit,
-)
 
 
 @router.message(
@@ -544,9 +457,6 @@ _HR_STOP_STATES = (
     Command("cancel"),
 )
 async def stop_any_fsm(message: Message, state: FSMContext) -> None:
-    if message.from_user:
-        _cancel_reminder(message.from_user.id)
-    await _delete_prompt_message(message.bot, message.chat.id, state)
     data = await state.get_data()
     _cleanup_pdf(data.get("hr_review_pdf_path"))
     lang = data.get("ui_lang") or (await _user_lang(message.from_user.id if message.from_user else 0))
@@ -591,136 +501,29 @@ async def cb_hr_agree(query: CallbackQuery, state: FSMContext) -> None:
         await query.message.answer(msg(lang, "vac_na"))
         return
     title = (_bilingual_value(v, lang, "title") or v.title).strip()
-    await state.set_state(HRCandidateState.waiting_name)
+    await state.set_state(HRCandidateState.waiting_photo)
     await state.update_data(
         vacancy_id=vid,
         vacancy_title=title,
         ui_lang=lang,
+        survey_step=1,
+        survey_answers=[],
+        candidate_photo_id=None,
+        hr_review_pdf_path=None,
+        full_name=None,
     )
     try:
         await query.message.delete()
     except TelegramBadRequest:
         pass
-    await query.message.answer(msg(lang, "hr_name_q"), reply_markup=_stop_kb(lang))
-
-
-@router.message(HRCandidateState.waiting_name, F.text)
-async def hr_name_step(message: Message, state: FSMContext) -> None:
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    await state.update_data(full_name=message.text.strip())
-    await state.set_state(HRCandidateState.waiting_phone)
-    await message.answer(msg(lang, "hr_phone_q"), reply_markup=_phone_kb(lang))
-
-
-@router.message(HRCandidateState.waiting_phone, F.contact)
-async def hr_phone_contact(message: Message, state: FSMContext) -> None:
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    await state.update_data(phone=message.contact.phone_number)
-    await state.set_state(HRCandidateState.waiting_city)
-    await message.answer(msg(lang, "hr_city_q"), reply_markup=hr_city_kb())
-
-
-@router.message(HRCandidateState.waiting_phone, F.text)
-async def hr_phone_text(message: Message, state: FSMContext) -> None:
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    txt = message.text.strip()
-    if len(txt) < 6:
-        await message.answer(msg(lang, "hr_invalid_phone"), reply_markup=_phone_kb(lang))
-        return
-    await state.update_data(phone=txt)
-    await state.set_state(HRCandidateState.waiting_city)
-    await message.answer(msg(lang, "hr_city_q"), reply_markup=hr_city_kb())
-
-
-@router.callback_query(HRCandidateState.waiting_city, F.data.startswith("hrcity:"))
-async def hr_city_step(query: CallbackQuery, state: FSMContext) -> None:
-    await query.answer()
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    city = (query.data or "").split(":", 1)[1]
-    await state.update_data(city=city)
-    try:
-        await query.message.delete()
-    except TelegramBadRequest:
-        pass
-    await state.set_state(HRCandidateState.waiting_employment)
-    await query.message.answer(msg(lang, "hr_emp_q"), reply_markup=hr_employment_kb(lang))
-
-
-@router.callback_query(HRCandidateState.waiting_employment, F.data.startswith("hremp:"))
-async def hr_employment_step(query: CallbackQuery, state: FSMContext) -> None:
-    await query.answer()
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    value = (query.data or "").split(":", 1)[1]
-    employment = msg(lang, "hr_emp_full") if value == "full" else msg(lang, "hr_emp_part")
-    await state.update_data(employment=employment)
-    await state.set_state(HRCandidateState.waiting_payment)
-    await query.message.answer(msg(lang, "hr_pay_q"), reply_markup=hr_payment_kb(lang))
-
-
-@router.callback_query(HRCandidateState.waiting_payment, F.data.startswith("hrpay:"))
-async def hr_payment_step(query: CallbackQuery, state: FSMContext) -> None:
-    await query.answer()
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    value = (query.data or "").split(":", 1)[1]
-    payment = msg(lang, "hr_pay_salary") if value == "salary" else msg(lang, "hr_pay_piece")
-    await state.update_data(payment=payment)
-    await state.set_state(HRCandidateState.waiting_income)
-    await query.message.answer(msg(lang, "hr_income_q"), reply_markup=_stop_kb(lang))
-
-
-@router.message(HRCandidateState.waiting_income, F.text)
-async def hr_income_step(message: Message, state: FSMContext) -> None:
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    income = message.text.strip()
-    if len(income) < 2:
-        await message.answer(msg(lang, "hr_invalid_text"), reply_markup=_stop_kb(lang))
-        return
-    await state.update_data(income_expectation=income)
-    await state.set_state(HRCandidateState.waiting_resume)
-    await message.answer(msg(lang, "hr_resume_q"), reply_markup=_stop_kb(lang))
-
-
-@router.message(HRCandidateState.waiting_resume, F.document)
-async def hr_resume_doc(message: Message, state: FSMContext) -> None:
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    doc = message.document
-    if not _allowed_doc_name(doc.file_name):
-        await message.answer(msg(lang, "hr_invalid_resume"), reply_markup=_stop_kb(lang))
-        return
-    await state.update_data(resume_doc_id=doc.file_id, resume_doc_name=doc.file_name, resume_text=None)
-    await state.set_state(HRCandidateState.waiting_portfolio)
-    await message.answer(msg(lang, "hr_portfolio_q"), reply_markup=_stop_kb(lang))
-
-
-@router.message(HRCandidateState.waiting_resume, F.text)
-async def hr_resume_text(message: Message, state: FSMContext) -> None:
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    text = message.text.strip()
-    if not _is_url(text):
-        await message.answer(msg(lang, "hr_invalid_resume"), reply_markup=_stop_kb(lang))
-        return
-    await state.update_data(resume_text=text, resume_doc_id=None, resume_doc_name=None)
-    await state.set_state(HRCandidateState.waiting_portfolio)
-    await message.answer(msg(lang, "hr_portfolio_q"), reply_markup=_stop_kb(lang))
-
-
-@router.message(HRCandidateState.waiting_portfolio, F.text)
-async def hr_portfolio_step(message: Message, state: FSMContext) -> None:
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    text = message.text.strip()
-    if not _is_url(text):
-        await message.answer(msg(lang, "hr_invalid_portfolio"), reply_markup=_stop_kb(lang))
-        return
-    await state.update_data(portfolio=text)
-    await state.set_state(HRCandidateState.waiting_photo)
-    await message.answer(msg(lang, "hr_photo_q"), reply_markup=_stop_kb(lang))
+    await query.message.answer(msg(lang, "hr_photo_first_q"), reply_markup=_stop_kb(lang))
 
 
 @router.message(HRCandidateState.waiting_photo, F.photo)
-async def hr_photo_step(message: Message, state: FSMContext) -> None:
+async def hr_photo_first(message: Message, state: FSMContext) -> None:
     await state.update_data(candidate_photo_id=message.photo[-1].file_id)
-    await state.set_state(HRCandidateState.waiting_test_choice)
-    await _send_hr_test_step(message, state)
+    await state.set_state(HRCandidateState.waiting_survey)
+    await _send_survey_question(message, state)
 
 
 @router.message(HRCandidateState.waiting_photo)
@@ -729,75 +532,103 @@ async def hr_photo_invalid(message: Message, state: FSMContext) -> None:
     await message.answer(msg(lang, "hr_invalid_photo"), reply_markup=_stop_kb(lang))
 
 
-@router.callback_query(HRCandidateState.waiting_test_choice, F.data == "hrtest:later")
-async def hr_test_later(query: CallbackQuery, state: FSMContext) -> None:
+@router.message(HRCandidateState.waiting_survey, F.contact)
+async def survey_phone_contact(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    step: int = data.get("survey_step") or 1
+    if step != 2 or SURVEY_ITEMS[1]["kind"] != "phone":
+        return
+    phone = message.contact.phone_number if message.contact else ""
+    if not phone:
+        lang = data.get("ui_lang", LANG_UZ)
+        await message.answer(msg(lang, "hr_invalid_phone"), reply_markup=_phone_kb(lang))
+        return
+    await _advance_survey(message, state, phone)
+
+
+@router.message(HRCandidateState.waiting_survey, F.text)
+async def survey_text(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    step: int = data.get("survey_step") or 1
+    lang = data.get("ui_lang", LANG_UZ)
+    item = SURVEY_ITEMS[step - 1]
+    txt = (message.text or "").strip()
+
+    if item["kind"] == "phone":
+        if len(txt) < 6:
+            await message.answer(msg(lang, "hr_invalid_phone"), reply_markup=_phone_kb(lang))
+            return
+        await _advance_survey(message, state, txt)
+        return
+
+    if item["kind"] != "text":
+        await message.answer(msg(lang, "hr_use_inline_hint"), reply_markup=_stop_kb(lang))
+        return
+
+    if len(txt) < 1:
+        await message.answer(msg(lang, "hr_invalid_text"), reply_markup=_stop_kb(lang))
+        return
+    await _advance_survey(message, state, txt)
+
+
+@router.callback_query(HRCandidateState.waiting_survey, F.data.startswith("hrcity:"))
+async def survey_city(query: CallbackQuery, state: FSMContext) -> None:
     await query.answer()
     data = await state.get_data()
+    if (data.get("survey_step") or 0) != 3:
+        return
+
+    raw = (query.data or "").split(":", 1)[1]
     lang = data.get("ui_lang", LANG_UZ)
-    if query.from_user:
-        await _schedule_reminder(query.from_user.id, query.message.chat.id, query.bot, lang)
-    await query.message.answer(msg(lang, "hr_test_later_ok"), reply_markup=_main_kb(lang))
-    await state.clear()
-
-
-@router.callback_query(HRCandidateState.waiting_test_choice, F.data == "hrtest:send")
-async def hr_test_send(query: CallbackQuery, state: FSMContext) -> None:
-    await query.answer()
-    await state.set_state(HRCandidateState.waiting_test_submit)
+    display = city_answer_for_pdf(raw, lang)
+    await _advance_survey(query.message, state, display)
     try:
-        await query.message.edit_reply_markup(reply_markup=None)
+        await query.message.delete()
     except TelegramBadRequest:
         pass
 
 
-@router.message(HRCandidateState.waiting_test_submit, F.document)
-async def hr_test_submit_doc(message: Message, state: FSMContext) -> None:
-    doc = message.document
-    if not _allowed_doc_name(doc.file_name):
-        lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-        await message.answer(msg(lang, "hr_invalid_test"))
+@router.callback_query(HRCandidateState.waiting_survey, F.data.startswith("hremp:"))
+async def survey_employment(query: CallbackQuery, state: FSMContext) -> None:
+    await query.answer()
+    data = await state.get_data()
+    if (data.get("survey_step") or 0) != 4:
         return
-    await state.update_data(test_doc_id=doc.file_id, test_doc_name=doc.file_name, test_text=None)
-    await _continue_hr_after_test(message, state)
-
-
-@router.message(HRCandidateState.waiting_test_submit, F.text)
-async def hr_test_submit_text(message: Message, state: FSMContext) -> None:
-    text = message.text.strip()
-    if not text:
-        lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-        await message.answer(msg(lang, "hr_invalid_text"))
+    lang = data.get("ui_lang", LANG_UZ)
+    value = (query.data or "").split(":", 1)[1]
+    if value == "full":
+        label = msg(lang, "hr_emp_full")
+    elif value == "part":
+        label = msg(lang, "hr_emp_part")
+    elif value == "project":
+        label = msg(lang, "hr_emp_project")
+    else:
         return
-    await state.update_data(test_text=text, test_doc_id=None, test_doc_name=None)
-    await _continue_hr_after_test(message, state)
+    await _advance_survey(query.message, state, label)
 
 
-@router.message(
-    HRCandidateState.waiting_name,
-    HRCandidateState.waiting_employment,
-    HRCandidateState.waiting_payment,
-    HRCandidateState.waiting_income,
-    HRCandidateState.waiting_portfolio,
-    HRCandidateState.waiting_test_submit,
-)
-async def hr_text_only_fallback(message: Message, state: FSMContext) -> None:
+@router.callback_query(HRCandidateState.waiting_survey, F.data.startswith("hrpay:"))
+async def survey_payment(query: CallbackQuery, state: FSMContext) -> None:
+    await query.answer()
+    data = await state.get_data()
+    if (data.get("survey_step") or 0) != 5:
+        return
+    lang = data.get("ui_lang", LANG_UZ)
+    value = (query.data or "").split(":", 1)[1]
+    if value == "fixed":
+        label = msg(lang, "hr_pay_fixed")
+    elif value == "scenario":
+        label = msg(lang, "hr_pay_scenario")
+    else:
+        return
+    await _advance_survey(query.message, state, label)
+
+
+@router.message(HRCandidateState.waiting_survey)
+async def survey_wrong_type(message: Message, state: FSMContext) -> None:
     lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    await message.answer(msg(lang, "hr_invalid_text"))
+    await message.answer(msg(lang, "hr_invalid_text"), reply_markup=_stop_kb(lang))
 
-
-@router.message(HRCandidateState.waiting_resume)
-async def hr_resume_invalid(message: Message, state: FSMContext) -> None:
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    await message.answer(msg(lang, "hr_invalid_resume"))
-
-
-@router.message(HRCandidateState.waiting_city)
-async def hr_city_invalid(message: Message, state: FSMContext) -> None:
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
-    await message.answer(msg(lang, "hr_city_q"), reply_markup=hr_city_kb())
-
-
-# ─────────────────────────── Apply ──────────────────────────────────
 
 @router.message(F.text.in_(all_labels("btn_apply")))
 async def menu_apply(message: Message, state: FSMContext) -> None:

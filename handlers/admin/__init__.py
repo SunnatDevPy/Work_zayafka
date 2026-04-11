@@ -1,4 +1,4 @@
-"""Admin handlers: vacancies, questions, FAQ."""
+"""Admin handlers: vacancies, broadcast, stats."""
 
 from handlers.admin.core import router
 

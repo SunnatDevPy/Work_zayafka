@@ -4,7 +4,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
-from handlers import admin, admin_broadcast, admin_faq, channel_review, faq, user
+from handlers import admin, admin_broadcast, channel_review, user
 
 
 def create_bot(token: str) -> Bot:
@@ -18,10 +18,8 @@ def create_dispatcher() -> Dispatcher:
 def include_routers(dp: Dispatcher) -> None:
     dp.include_router(channel_review.router)
     dp.include_router(admin.router)
-    dp.include_router(admin_faq.router)
     dp.include_router(admin_broadcast.router)
     dp.include_router(user.router)
-    dp.include_router(faq.router)
 
 
 async def setup_commands(bot: Bot) -> None:
@@ -29,4 +27,3 @@ async def setup_commands(bot: Bot) -> None:
         BotCommand(command="start", description="Ishga tushirish / Запуск"),
         BotCommand(command="lang", description="Til / Язык"),
     ])
-
