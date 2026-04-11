@@ -170,7 +170,7 @@ SURVEY_ITEMS: list[SurveyItem] = [
             "╍╍╍╍╍╍╍╍╍╍╍╍╍╍\n\n"
             "✨ <b>Reels miyasi</b>\n\n"
             "Qisqa video nima uchun <b>samarali va qiziqarli</b> bo‘ladi? O‘z fikringizni yozing.\n\n"
-            "🔥 Esingizda qolgan namunalar — xush keladi.\n\n"
+            "🔥 Esingizda qolgan namunalarni ham yozishingiz mumkin.\n\n"
             "✏️ Erkin yozing ↓"
         ),
     },
@@ -254,8 +254,8 @@ SURVEY_ITEMS: list[SurveyItem] = [
         "ask_uz": (
             "⭐ <b>12-savol · 15 dan</b>\n"
             "╍╍╍╍╍╍╍╍╍╍╍╍╍╍\n\n"
-            "👥 <b>O‘qituvchilaringiz</b>\n\n"
-            "<b>3 nafar bloger yoki muallif</b> — kontenti kuchli deb bilasiz; qisqacha sabab.\n\n"
+            "👥 <b>O‘z mezonlaringiz</b>\n\n"
+            "<b>3 nafar bloger yoki muallif</b> — kontenti kuchli deb bilasiz; qisqacha nima uchun.\n\n"
             "✨ Sizning didingiz muhim.\n\n"
             "✏️ Ro‘yxat va izoh ↓"
         ),

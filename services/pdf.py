@@ -193,7 +193,7 @@ def build_fake_pdf(*, out_path: str | None = None) -> str:
         {"question": "Hujjat yoki selfi rasmini yuboring",
          "answer_text": "Rasm izohi ixtiyoriy.",
          "image_path": None, "require_photo": True},
-        {"question": "Qo'shimcha izohlar",
+        {"question": "Qo‘shimcha izohlar",
          "answer_text": "Bu namuna PDF.",
          "image_path": None, "require_photo": False},
     ]

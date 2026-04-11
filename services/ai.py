@@ -10,20 +10,20 @@ logger = logging.getLogger(__name__)
 _DEFAULT_PROMPT = """\
 Siz [KOMPANIYA NOMI] kompaniyasining rasmiy AI-yordamchisisiz.
 
-FAQAT quyidagi mavzular bo'yicha javob bering:
-• Kompaniya haqida umumiy ma'lumot (tarixi, faoliyati, qadriyatlari)
+FAQAT quyidagi mavzular bo‘yicha javob bering:
+• Kompaniya haqida umumiy maʼlumot (tarixi, faoliyati, qadriyatlari)
 • Mavjud vakansiyalar: lavozim, talablar, ish haqi, ish joyi
 • Ish sharoitlari, ish vaqti, bonuslar va imtiyozlar
 • Ariza berish jarayoni va bosqichlari
-• Nomzodlarga qo'yiladigan umumiy talablar
+• Nomzodlarga qo‘yiladigan umumiy talablar
 
-Agar savol ushbu mavzulardan TASHQARIDA bo'lsa:
-"Bu savol mening vakolatimdan tashqarida. Kompaniyamiz vakansiyalari yoki ish sharoitlari haqida so'rasangiz, yordam bera olaman!" deb javob bering.
+Agar savol ushbu mavzulardan TASHQARIDA bo‘lsa:
+"Bu savol mening vakolatimdan tashqarida. Kompaniyamiz vakansiyalari yoki ish sharoitlari haqida so‘rasangiz, yordam bera olaman!" deb javob bering.
 
 Qoidalar:
-- Javoblar qisqa (3-6 jumla) va aniq bo'lsin
-- Doimo do'stona va professional ohangda
-- O'zbek tilida javob bering
+- Javoblar qisqa (3-6 jumla) va aniq bo‘lsin
+- Doimo do‘stona va professional ohangda
+- O‘zbek tilida javob bering
 - Formatlash uchun faqat oddiy belgilar ishlating: •, -, raqamlar
 - HTML yoki markdown belgilarini ishlatmang
 """
@@ -50,7 +50,7 @@ async def ask_openai(
     try:
         from openai import AsyncOpenAI, APIStatusError
     except ImportError:
-        raise RuntimeError("openai paketi o'rnatilmagan. 'pip install openai' buyrug'ini ishga tushiring.")
+        raise RuntimeError("openai paketi o‘rnatilmagan. \"pip install openai\" buyrug‘ini ishga tushiring.")
 
     client = AsyncOpenAI(api_key=api_key)
 
@@ -70,9 +70,9 @@ async def ask_openai(
     except APIStatusError as exc:
         logger.error("OpenAI API xatosi [%s]: %s", exc.status_code, exc.message)
         if exc.status_code == 401:
-            raise ValueError("OPENAI_API_KEY noto'g'ri yoki muddati o'tgan.")
+            raise ValueError("OPENAI_API_KEY noto‘g‘ri yoki muddati o‘tgan.")
         if exc.status_code == 429:
-            raise ValueError("OpenAI limit oshib ketdi. Birozdan so'ng urinib ko'ring.")
+            raise ValueError("OpenAI limit oshib ketdi. Birozdan so‘ng urinib ko‘ring.")
         raise
     except Exception as exc:
         logger.error("OpenAI umumiy xato: %s", exc)

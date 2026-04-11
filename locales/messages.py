@@ -66,7 +66,7 @@ _UI: dict[str, dict[str, str]] = {
             "✅ Ваша заявка успешно прошла отбор.\n"
             "📞 Вы <b>приглашены на собеседование</b>.\n\n"
             "⏳ В ближайшее время с вами свяжется HR-менеджер,\n"
-            "чтобы согласовать удобные дату и время.\n\n"
+            "чтобы согласовать удобную для вас дату и время.\n\n"
             "💙 Спасибо за отклик!"
         ),
         "company_info": (
@@ -89,7 +89,7 @@ _UI: dict[str, dict[str, str]] = {
         "pdf_photo_caption": "Фотография кандидата",
         "pdf_col_field": "Поле",
         "pdf_col_value": "Значение",
-        "hr_name_q": "✨ Отлично! Давай знакомиться. Напиши свое Имя и Фамилию.",
+        "hr_name_q": "✨ Отлично! Давай знакомиться. Напиши своё имя и фамилию.",
         "hr_phone_q": "📞 Поделись номером телефона для связи.",
         "hr_phone_btn": "📱 Отправить контакт",
         "hr_city_q": "Из какого ты города? (Нам важно понимать часовой пояс)\nВыбери один из 12 городов кнопкой ниже 👇",
@@ -120,7 +120,7 @@ _UI: dict[str, dict[str, str]] = {
         "hr_test_later_ok": "Договорились! Я напомню тебе о тестовом завтра.",
         "hr_test_waiting": "📎 Отправь готовое тестовое: текст, ссылку или прикрепи файл.",
         "hr_test_reminder": "Напоминаю: пришли сценарий текстом, ссылкой или файлом и нажми «Прикрепить готовое», когда будет готово.",
-        "hr_invalid_text": "⚠️ Нужен текстовый ответ. Попробуй еще раз.",
+        "hr_invalid_text": "⚠️ Нужен текстовый ответ. Попробуй ещё раз.",
         "hr_invalid_phone": "⚠️ Пришли номер телефона текстом или кнопкой контакта.",
         "hr_invalid_resume": "⚠️ Пришли ссылку на резюме или файл PDF/Word (doc/docx).",
         "hr_invalid_portfolio": "⚠️ Нужна ссылка на портфолио. Отправь URL текстом.",
@@ -152,26 +152,26 @@ _UI: dict[str, dict[str, str]] = {
         "view_header": "🔍 <b>Mavjud vakansiyalar:</b>\n\nBatafsil ko‘rish uchun tanlang 👇",
         "view_back_main": "🏠 Asosiy menyuga qaytdingiz.\nKerakli bo‘limni tanlang 👇",
         "vac_na": "⚠️ Vakansiya mavjud emas.",
-        "vac_desc_none": "Tavsif qo'shilmagan.",
+        "vac_desc_none": "Tavsif qo‘shilmagan.",
         "vac_card": "💼 <b>{title}</b>\n\n📄 {desc}",
         "apply_empty": "📭 Hozircha faol vakansiya yo‘q. Keyinroq urinib ko‘ring.",
         "apply_pick": "💼 Vakansiyani tanlang:",
         "review_caption": (
             "📄 <b>Arizangiz tayyor!</b>\n\n"
-            "Ma'lumotlarni tekshirib ko'ring.\n"
-            "Hammasi to'g'rimi?"
+            "Maʼlumotlarni tekshirib ko‘ring.\n"
+            "Hammasi to‘g‘rimi?"
         ),
         "review_redo": "🔄 Ariza bekor qilindi.\nQaytadan boshlash uchun «📋 Ariza qoldirish» tugmasini bosing.",
-        "answer_stop": "🛑 Ariza topshirish to'xtatildi.",
-        "faq_empty": "📭 Hozircha FAQ qo'shilmagan.\nAdministrator tez orada to'ldiradi.",
-        "faq_list_title": "📋 <b>Tez-tez so'raladigan savollar</b>\n\nQiziqtirgan savolni tanlang 👇",
+        "answer_stop": "🛑 Ariza topshirish to‘xtatildi.",
+        "faq_empty": "📭 Hozircha FAQ qo‘shilmagan.\nAdministrator tez orada to‘ldiradi.",
+        "faq_list_title": "📋 <b>Tez-tez so‘raladigan savollar</b>\n\nQiziqtirgan savolni tanlang 👇",
         "faq_not_found": "⚠️ Savol topilmadi.",
         "btn_apply": "📋 Ariza qoldirish",
         "btn_view": "💼 Vakansiyalar",
         "btn_company": "Kompaniya haqida",
         "btn_services": "Xizmatlar",
-        "btn_faq": "📋 Tez-tez so'raladigan savollar",
-        "btn_stop_form": "⛔️ To'xtatish",
+        "btn_faq": "📋 Tez-tez so‘raladigan savollar",
+        "btn_stop_form": "⛔️ To‘xtatish",
         "inline_cancel": "❌ Bekor qilish",
         "inline_back_main": "🔙 Asosiy menyu",
         "inline_back": "🔙 Orqaga",
@@ -185,20 +185,20 @@ _UI: dict[str, dict[str, str]] = {
         "channel_interview_sent": "✅ Nomzodga suhbatga taklif yuborildi.",
         "interview_user_msg": (
             "🎉 <b>Ajoyib yangilik!</b>\n\n"
-            "✅ Arizangiz saralashdan muvaffaqiyatli o'tdi.\n"
+            "✅ Arizangiz saralashdan muvaffaqiyatli o‘tdi.\n"
             "📞 Siz <b>suhbatga taklif qilindingiz</b>.\n\n"
-            "⏳ Tez orada HR menejer siz bilan bog'lanib,\n"
+            "⏳ Tez orada HR menejer siz bilan bog‘lanib,\n"
             "qulay sana va vaqtni kelishib oladi.\n\n"
             "💙 Ariza qoldirganingiz uchun rahmat!"
         ),
         "company_info": (
             "🏢 <b>Kompaniya haqida</b>\n\n"
-            "Biz digital yo'nalishda rivojlanayotgan jamoamiz va ijodkor, mas'uliyatli mutaxassislarni qadrlaymiz."
+            "Biz digital yo‘nalishda rivojlanayotgan jamoamiz va ijodkor, mas’uliyatli mutaxassislarni qadrlaymiz."
         ),
-        "services_dev": "🛠 «Xizmatlar» bo'limi ishlab chiqilmoqda.",
+        "services_dev": "🛠 «Xizmatlar» bo‘limi ishlab chiqilmoqda.",
         "hr_pd_text": (
-            "🔐 Ariza yuborishdan oldin shaxsiy ma'lumotlarni qayta ishlashga rozilik kerak.\n\n"
-            "Quyidagi tugmani bosib, ishga qabul jarayoni uchun ma'lumotlaringizni qayta ishlashga rozilik bildirasiz."
+            "🔐 Ariza yuborishdan oldin shaxsiy maʼlumotlarni qayta ishlashga rozilik kerak.\n\n"
+            "Quyidagi tugmani bosib, ishga qabul jarayoni uchun maʼlumotlaringizni qayta ishlashga rozilik bildirasiz."
         ),
         "hr_pd_agree_btn": "Roziman",
         "hr_photo_first_q": (
@@ -211,31 +211,31 @@ _UI: dict[str, dict[str, str]] = {
         "pdf_col_field": "Maydon",
         "pdf_col_value": "Qiymat",
         "hr_name_q": "✨ Ajoyib! Keling, tanishamiz. Ism va familiyangizni yozing.",
-        "hr_phone_q": "📞 Bog'lanish uchun telefon raqamingizni yuboring.",
+        "hr_phone_q": "📞 Bog‘lanish uchun telefon raqamingizni yuboring.",
         "hr_phone_btn": "📱 Kontaktni yuborish",
         "hr_city_q": "Qaysi shahardansiz? (Soat mintaqasi muhim)\n12 ta shahardan birini quyidagi tugmalar bilan tanlang 👇",
-        "hr_emp_q": "🧩 Qaysi bandlik formatini ko'rib chiqyapsiz?",
+        "hr_emp_q": "🧩 Qaysi bandlik formatini ko‘rib chiqyapsiz?",
         "hr_emp_full": "To‘liq bandlik",
         "hr_emp_part": "Qisman",
         "hr_emp_project": "Loyihaviy",
-        "hr_pay_q": "💸 To'lov formatini qanday qulay deb bilasiz?",
+        "hr_pay_q": "💸 To‘lov formatini qanday qulay deb bilasiz?",
         "hr_pay_fixed": "Fiks to‘lov",
         "hr_pay_scenario": "Ssenariy bo‘yicha to‘lov",
         "hr_pay_salary": "Oylik fiks maosh",
-        "hr_pay_piece": "Ssenariy bo'yicha (dona)",
+        "hr_pay_piece": "Ssenariy bo‘yicha (dona)",
         "hr_income_q": (
-            "💰 Tanlangan formatga ko'ra moliyaviy kutuvingizni raqamda yozing.\n\n"
-            "<i>Misol: 2 000 000 so'm</i>"
+            "💰 Tanlangan formatga ko‘ra moliyaviy kutishingizni raqamda yozing.\n\n"
+            "<i>Misol: 2 000 000 so‘m</i>"
         ),
         "hr_resume_q": "📄 Rezyume havolasini yuboring (Google Docs, hh.ru) yoki PDF/Word fayl yuklang.",
         "hr_portfolio_q": "🎬 Ssenarist uchun eng muhimi — portfolio! Eng yaxshi ishlaringiz havolasini yuboring.",
-        "hr_photo_q": "📸 Oxirgi qadam: iltimos, o'z rasmingizni yuboring.",
+        "hr_photo_q": "📸 Oxirgi qadam: iltimos, o‘z rasmingizni yuboring.",
         "hr_test_q": (
-            "Zo'r, ma'lumotlar olindi! Oxirgi qadam — kichik test vazifa.\n"
+            "Zo‘r, maʼlumotlar olindi! Oxirgi qadam — kichik test vazifa.\n"
             "U uslubingizni tushunishga yordam beradi.\n\n"
             "Test havolasi: {url}"
         ),
-        "hr_test_not_set": "⚠️ Bu vakansiya uchun test vazifa hali kiritilmagan. Administrator bilan bog'laning.",
+        "hr_test_not_set": "⚠️ Bu vakansiya uchun test vazifa hali kiritilmagan. Administrator bilan bog‘laning.",
         "hr_test_send_ready": "📎 Tayyorini yuborish",
         "hr_test_do_later": "⏳ Keyinroq qilaman",
         "hr_test_later_ok": "Kelishdik! Ertaga test vazifa haqida eslataman.",
@@ -244,20 +244,20 @@ _UI: dict[str, dict[str, str]] = {
         "hr_invalid_text": "⚠️ Matnli javob yuboring.",
         "hr_invalid_phone": "⚠️ Telefonni matn yoki kontakt tugmasi orqali yuboring.",
         "hr_invalid_resume": "⚠️ Rezyume havolasi yoki PDF/Word (doc/docx) fayl yuboring.",
-        "hr_invalid_portfolio": "⚠️ Portfolio havolasini URL ko'rinishida yuboring.",
+        "hr_invalid_portfolio": "⚠️ Portfolio havolasini URL ko‘rinishida yuboring.",
         "hr_invalid_photo": "⚠️ Iltimos, foto yuboring.",
         "hr_invalid_test": "⚠️ Test javobini matn, havola yoki fayl sifatida yuboring.",
-        "hr_pdf_error": "⚠️ PDF yaratib bo'lmadi. Qayta urinib ko'ring yoki «To'xtatish» tugmasini bosing.",
-        "hr_review_hint": "👇 PDF ostidagi «Tasdiqlash» tugmasi bilan yuboring yoki «Qaytadan» bilan qayta to'ldiring.",
+        "hr_pdf_error": "⚠️ PDF yaratib bo‘lmadi. Qayta urinib ko‘ring yoki «To‘xtatish» tugmasini bosing.",
+        "hr_review_hint": "👇 PDF ostidagi «Tasdiqlash» tugmasi bilan yuboring yoki «Qaytadan» bilan qayta to‘ldiring.",
         "hr_done_user": (
             "Bingo! 🎉 Arizangiz HR menejerga yuborildi.\n"
-            "Materiallarni ko'rib chiqib, bir necha ish kunida javob beramiz. Omad!"
+            "Materiallarni ko‘rib chiqib, bir necha ish kunida javob beramiz. Omad!"
         ),
         "scenario_task_prompt": (
             "🎬 <b>Vazifa:</b> ssenariy yozing (xabar, hujjat havolasi yoki fayl bilan).\n\n"
             "✍️ Matn, havola yoki fayl mos keladi.\n"
             "👇 Tayyor bo‘lsa — «Tayyorini yuborish»; vaqt kerak — «Keyinroq qilaman».\n\n"
-            "⛔️ To‘xtatish: «To'xtatish» tugmasi yoki /cancel"
+            "⛔️ To‘xtatish: «To‘xtatish» tugmasi yoki /cancel"
         ),
     },
 }

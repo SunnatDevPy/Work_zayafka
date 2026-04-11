@@ -9,7 +9,7 @@ def language_pick_kb() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
         InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang:ru", style="danger"),
-        InlineKeyboardButton(text="🇺🇿 O'zbekcha", callback_data="lang:uz", style="success"),
+        InlineKeyboardButton(text="🇺🇿 O‘zbekcha", callback_data="lang:uz", style="success"),
     )
     return b.as_markup()
 
@@ -195,16 +195,16 @@ def admin_faq_list_kb(faqs: list) -> InlineKeyboardMarkup:
     for f in faqs:
         short = f.question[:48] + "…" if len(f.question) > 48 else f.question
         b.row(InlineKeyboardButton(text=f"📝 {short}", callback_data=f"admfe:{f.id}"))
-    b.row(InlineKeyboardButton(text="➕ Добавить FAQ / FAQ qo'shish", callback_data="admfa:add"))
+    b.row(InlineKeyboardButton(text="➕ Добавить FAQ / FAQ qo‘shish", callback_data="admfa:add"))
     b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data="admfa:back"))
     return b.as_markup()
 
 
 def faq_edit_kb(faq_id: int) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="✏️ Изменить вопрос / Savolni o'zgartirish", callback_data=f"admfq:{faq_id}"))
-    b.row(InlineKeyboardButton(text="✏️ Изменить ответ / Javobni o'zgartirish", callback_data=f"admfa_ans:{faq_id}"))
-    b.row(InlineKeyboardButton(text="🗑 Удалить / O'chirish", callback_data=f"admfd:{faq_id}"))
+    b.row(InlineKeyboardButton(text="✏️ Изменить вопрос / Savolni o‘zgartirish", callback_data=f"admfq:{faq_id}"))
+    b.row(InlineKeyboardButton(text="✏️ Изменить ответ / Javobni o‘zgartirish", callback_data=f"admfa_ans:{faq_id}"))
+    b.row(InlineKeyboardButton(text="🗑 Удалить / O‘chirish", callback_data=f"admfd:{faq_id}"))
     b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data="adm:faq"))
     return b.as_markup()
 
@@ -212,7 +212,7 @@ def faq_edit_kb(faq_id: int) -> InlineKeyboardMarkup:
 def faq_delete_confirm_kb(faq_id: int) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text="✅ Да / Ha, o'chirish", callback_data=f"admfd_ok:{faq_id}"),
+        InlineKeyboardButton(text="✅ Да / Ha, o‘chirish", callback_data=f"admfd_ok:{faq_id}"),
         InlineKeyboardButton(text="❌ Отмена / Bekor", callback_data=f"admfe:{faq_id}"),
     )
     return b.as_markup()
@@ -247,26 +247,26 @@ def vacancy_admin_list_kb(vacancies: list) -> InlineKeyboardMarkup:
         if len(label) > 50:
             label = label[:47] + "…"
         b.row(InlineKeyboardButton(text=f"{mark} {label}", callback_data=f"admve:{v.id}"))
-    b.row(InlineKeyboardButton(text="➕ Добавить вакансию / Vakansiya qo'shish", callback_data="admva:add"))
+    b.row(InlineKeyboardButton(text="➕ Добавить вакансию / Vakansiya qo‘shish", callback_data="admva:add"))
     b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data="admback:admin"))
     return b.as_markup()
 
 
 def vacancy_edit_kb(vacancy_id: int, is_active: bool) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="✏️ Название / Nomni o'zgartirish", callback_data=f"advt:{vacancy_id}"))
-    b.row(InlineKeyboardButton(text="📝 Описание / Tavsifni o'zgartirish", callback_data=f"advd:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text="✏️ Название / Nomni o‘zgartirish", callback_data=f"advt:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text="📝 Описание / Tavsifni o‘zgartirish", callback_data=f"advd:{vacancy_id}"))
     toggle = "⏸ Деактивировать / Faolsizlashtirish" if is_active else "✅ Активировать / Faollashtirish"
     b.row(InlineKeyboardButton(text=toggle, callback_data=f"adva:{vacancy_id}"))
-    b.row(InlineKeyboardButton(text="🗑 Удалить / O'chirish", callback_data=f"advdel:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text="🗑 Удалить / O‘chirish", callback_data=f"advdel:{vacancy_id}"))
     b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data="adm:vac"))
     return b.as_markup()
 
 
 def vacancy_task_edit_kb(vacancy_id: int) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="🔗 Ссылка/текст / Link-matn qo'shish", callback_data=f"advtask_text:{vacancy_id}"))
-    b.row(InlineKeyboardButton(text="🗑 Удалить тест / Testni o'chirish", callback_data=f"advtask_clear:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text="🔗 Ссылка/текст / Link-matn qo‘shish", callback_data=f"advtask_text:{vacancy_id}"))
+    b.row(InlineKeyboardButton(text="🗑 Удалить тест / Testni o‘chirish", callback_data=f"advtask_clear:{vacancy_id}"))
     b.row(InlineKeyboardButton(text="⬅️ Назад / Orqaga", callback_data=f"admve:{vacancy_id}"))
     return b.as_markup()
 
@@ -274,7 +274,7 @@ def vacancy_task_edit_kb(vacancy_id: int) -> InlineKeyboardMarkup:
 def vacancy_delete_confirm_kb(vacancy_id: int) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text="✅ Да / Ha, o'chirish", callback_data=f"advdel_ok:{vacancy_id}"),
+        InlineKeyboardButton(text="✅ Да / Ha, o‘chirish", callback_data=f"advdel_ok:{vacancy_id}"),
         InlineKeyboardButton(text="❌ Отмена / Bekor", callback_data=f"admve:{vacancy_id}"),
     )
     return b.as_markup()

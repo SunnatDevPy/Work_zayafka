@@ -11,9 +11,9 @@ router = Router(name="user_homework")
 
 
 USER_BTN_APPLY = "📋 Ariza qoldirish"
-USER_BTN_VIEW = "🔍 Vakansiyalarni ko'rish"
+USER_BTN_VIEW = "🔍 Vakansiyalarni ko‘rish"
 USER_BTN_AI = "🤖 AI yordamchi"
-USER_BTN_FAQ = "📋 Tez-tez so'raladigan savollar"
+USER_BTN_FAQ = "📋 Tez-tez so‘raladigan savollar"
 
 
 def _main_kb() -> ReplyKeyboardMarkup:
@@ -38,7 +38,7 @@ async def homework_start(query: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(hw_items=[])
     await query.message.answer(
         "📤 Bajarilgan vazifani yuboring: matn, fayl, rasm yoki video.\n"
-        "✅ Hammasi tayyor bo'lsa — «Tayyor» tugmasini bosing.\n\n"
+        "✅ Hammasi tayyor bo‘lsa — «Tayyor» tugmasini bosing.\n\n"
         "⛔️ Bekor: /cancel",
 
     )

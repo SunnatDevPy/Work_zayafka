@@ -145,7 +145,7 @@ async def _vacancy_edit_text(vid: int) -> tuple[str, bool]:
 @router.message(Command("admin"))
 async def cmd_admin(message: Message, state: FSMContext) -> None:
     if not message.from_user or message.from_user.id not in conf.bot.admin_ids:
-        await message.answer("🚫 Ruxsat yo'q.")
+        await message.answer("🚫 Ruxsat yo‘q.")
         return
     await state.clear()
     lang = await _admin_lang(message.from_user.id if message.from_user else None)
@@ -168,7 +168,7 @@ async def adm_vac_list(query: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     r = await db.execute(select(Vacancy).order_by(Vacancy.sort_order, Vacancy.id))
     vacs = list(r.scalars().all())
-    text = "💼 <b>Vakansiyalar:</b>" if vacs else "📭 Hozircha vakansiya yo'q."
+    text = "💼 <b>Vakansiyalar:</b>" if vacs else "📭 Hozircha vakansiya yo‘q."
     await _edit_or_answer(query, text, vacancy_admin_list_kb(vacs))
 
 
@@ -188,11 +188,11 @@ async def adm_vac_add_start(query: CallbackQuery, state: FSMContext) -> None:
 async def adm_vac_add_title(message: Message, state: FSMContext) -> None:
     raw = (message.text or "").strip()
     if not raw:
-        await message.answer("⚠️ Bo'sh bo'lmasin.")
+        await message.answer("⚠️ Bo‘sh bo‘lmasin.")
         return
     title_ru, title_uz = _split_bilingual(raw)
     if not title_ru:
-        await message.answer("⚠️ Nom noto'g'ri.")
+        await message.answer("⚠️ Nom noto‘g‘ri.")
         return
     await state.update_data(new_title_ru=title_ru, new_title_uz=title_uz)
     await state.set_state(AdminVacancyNewSG.description)
@@ -206,7 +206,7 @@ async def adm_vac_add_title(message: Message, state: FSMContext) -> None:
         state,
         message,
         "📝 <b>Tavsif</b> (ixtiyoriy)\nFormat: <code>RU matn / UZ matn</code>\n"
-        "O'tkazib yuborish uchun — <code>-</code> yuboring.",
+        "O‘tkazib yuborish uchun — <code>-</code> yuboring.",
         reply_markup=_back_kb("admback:vac_list"),
     )
 
@@ -249,7 +249,7 @@ async def adm_vac_add_description(message: Message, state: FSMContext) -> None:
     r2 = await db.execute(select(Vacancy).order_by(Vacancy.sort_order, Vacancy.id))
     vacs = list(r2.scalars().all())
     await message.answer(
-        f"✅ Vakansiya qo'shildi.\n\n💼 <b>Vakansiyalar:</b>",
+        f"✅ Vakansiya qo‘shildi.\n\n💼 <b>Vakansiyalar:</b>",
         reply_markup=vacancy_admin_list_kb(vacs),
     )
 
@@ -290,7 +290,7 @@ async def adm_ve_title_start(query: CallbackQuery, state: FSMContext) -> None:
 async def adm_ve_title_save(message: Message, state: FSMContext) -> None:
     title = (message.text or "").strip()
     if not title:
-        await message.answer("⚠️ Nom bo'sh.")
+        await message.answer("⚠️ Nom bo‘sh.")
         return
     data = await state.get_data()
     vid = data.get("edit_vacancy_id")
@@ -318,7 +318,7 @@ async def adm_ve_desc_start(query: CallbackQuery, state: FSMContext) -> None:
     await _send_prompt_from_query(
         state,
         query,
-        "📝 Yangi tavsif\nFormat: <code>RU / UZ</code>\nO'chirish: <code>-</code>",
+        "📝 Yangi tavsif\nFormat: <code>RU / UZ</code>\nO‘chirish: <code>-</code>",
         reply_markup=_back_kb(f"admback:vac_edit:{vid}"),
     )
     try:
@@ -345,7 +345,7 @@ async def adm_ve_desc_save(message: Message, state: FSMContext) -> None:
         await message.delete()
     except Exception:
         pass
-    label = "yangilandi" if new_desc else "o'chirildi"
+    label = "yangilandi" if new_desc else "o‘chirildi"
     text, is_active = await _vacancy_edit_text(vid)
     await message.answer(f"✅ Tavsif {label}.\n\n{text}", reply_markup=vacancy_edit_kb(vid, is_active))
 
@@ -386,7 +386,7 @@ async def adm_ve_delete_confirm(query: CallbackQuery, state: FSMContext) -> None
         return
     await _edit_or_answer(
         query,
-        f"🗑 <b>«{_vacancy_line_title(v)}»</b> o'chirilsinmi?",
+        f"🗑 <b>«{_vacancy_line_title(v)}»</b> o‘chirilsinmi?",
         vacancy_delete_confirm_kb(vid),
     )
 
@@ -404,8 +404,8 @@ async def adm_ve_delete(query: CallbackQuery, state: FSMContext) -> None:
 
     r = await db.execute(select(Vacancy).order_by(Vacancy.sort_order, Vacancy.id))
     vacs = list(r.scalars().all())
-    list_text = "💼 <b>Vakansiyalar:</b>" if vacs else "📭 Hozircha vakansiya yo'q."
-    await _edit_or_answer(query, f"✅ «{title}» o'chirildi.\n\n{list_text}", vacancy_admin_list_kb(vacs))
+    list_text = "💼 <b>Vakansiyalar:</b>" if vacs else "📭 Hozircha vakansiya yo‘q."
+    await _edit_or_answer(query, f"✅ «{title}» o‘chirildi.\n\n{list_text}", vacancy_admin_list_kb(vacs))
 
 
 @router.callback_query(F.data.startswith("admback:"), AdminFilter())
@@ -423,7 +423,7 @@ async def admin_back(query: CallbackQuery, state: FSMContext) -> None:
     if raw == "admback:vac_list":
         r = await db.execute(select(Vacancy).order_by(Vacancy.sort_order, Vacancy.id))
         vacs = list(r.scalars().all())
-        text = "💼 <b>Vakansiyalar:</b>" if vacs else "📭 Hozircha vakansiya yo'q."
+        text = "💼 <b>Vakansiyalar:</b>" if vacs else "📭 Hozircha vakansiya yo‘q."
         await _edit_or_answer(query, text, vacancy_admin_list_kb(vacs))
         return
     if raw.startswith("admback:vac_edit:"):

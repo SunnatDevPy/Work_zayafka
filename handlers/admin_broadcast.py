@@ -67,7 +67,7 @@ async def adm_bc_send(query: CallbackQuery, state: FSMContext) -> None:
     except Exception:
         pass
     if not chat_id or not mid:
-        await query.message.answer("⚠️ Yuborish uchun ma'lumot yo'q.")
+        await query.message.answer("⚠️ Yuborish uchun maʼlumot yo‘q.")
         return
 
     r = await db.execute(select(BotUser.telegram_id))

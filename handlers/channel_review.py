@@ -26,7 +26,7 @@ async def application_interview(query: CallbackQuery) -> None:
     try:
         user_id = int((query.data or "").split(":", 2)[2])
     except (ValueError, IndexError):
-        await query.answer("⚠️ Ma'lumot xatosi", show_alert=True)
+        await query.answer("⚠️ Maʼlumot xatosi", show_alert=True)
         return
 
     await query.answer()
