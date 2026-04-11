@@ -1,13 +1,16 @@
 from aiogram import F, Router
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
 from config import conf
 from locales.messages import LANG_UZ, msg, norm_lang
 from utils.user_locale import get_user_locale
 
 router = Router(name="channel_review")
+
+# Пустая клавиатура — Telegram снимает инлайн-кнопки с сообщения.
+_NO_INLINE = InlineKeyboardMarkup(inline_keyboard=[])
 
 
 def _is_admin(uid: int | None) -> bool:
@@ -48,18 +51,29 @@ async def application_interview(query: CallbackQuery) -> None:
         return
 
     append = "\n\n" + msg(lg, "channel_interview_sent")
-    if query.message.caption:
-        try:
+    try:
+        if query.message.document or query.message.photo:
             cap = (query.message.caption or "") + append
             if len(cap) > 1024:
-                cap = (query.message.caption or "")[: max(0, 900 - len(append))] + append
-            await query.message.edit_caption(caption=cap, parse_mode=ParseMode.HTML)
-        except TelegramBadRequest:
-            pass
-    else:
-        try:
+                base = query.message.caption or ""
+                cap = base[: max(0, 1024 - len(append))] + append
+            await query.message.edit_caption(
+                caption=cap,
+                parse_mode=ParseMode.HTML,
+                reply_markup=_NO_INLINE,
+            )
+        elif query.message.text is not None:
             txt = (query.message.text or "") + append
-            await query.message.edit_text(txt, reply_markup=query.message.reply_markup)
+            await query.message.edit_text(
+                txt,
+                parse_mode=ParseMode.HTML,
+                reply_markup=_NO_INLINE,
+            )
+        else:
+            await query.message.edit_reply_markup(reply_markup=_NO_INLINE)
+    except TelegramBadRequest:
+        try:
+            await query.message.edit_reply_markup(reply_markup=_NO_INLINE)
         except TelegramBadRequest:
             pass
 
@@ -70,8 +84,12 @@ async def application_delete(query: CallbackQuery) -> None:
         await query.answer("🔒 Faqat administratorlar uchun.", show_alert=True)
         return
 
-    await query.answer("🗑 O‘chirildi")
     try:
         await query.bot.delete_message(query.message.chat.id, query.message.message_id)
+        await query.answer("🗑 O‘chirildi")
     except TelegramBadRequest:
+        try:
+            await query.message.edit_reply_markup(reply_markup=_NO_INLINE)
+        except TelegramBadRequest:
+            pass
         await query.answer("❌ Xabarni o‘chirish mumkin emas.", show_alert=True)
