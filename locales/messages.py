@@ -85,25 +85,16 @@ _UI: dict[str, dict[str, str]] = {
             "Затем ответьте на вопросы анкеты."
         ),
         "hr_use_inline_hint": "👇 Для этого вопроса выберите вариант кнопкой ниже.",
-        "hr_salary_from_ask": (
+        "hr_salary_ask": (
             "📊 <b>Вопрос 6 · из 15</b>\n"
             "╍╍╍╍╍╍╍╍╍╍╍╍╍╍\n\n"
-            "💵 <b>Зарплатная вилка</b>\n\n"
-            "Сначала выберите <b>нижнюю границу</b> (в сумах).\n"
-            "Доступный диапазон на кнопках: <b>от 2 500 000 до 5 000 000</b>.\n\n"
+            "💵 <b>Ожидаемая зарплата</b>\n\n"
+            "Выберите сумму на кнопках: <b>от 2 500 000 до 7 000 000</b> сум.\n\n"
             "👇 Только кнопки; произвольный текст не принимается.\n"
             "⛔️ Прервать: «Остановить» или /cancel"
         ),
-        "hr_salary_to_ask": (
-            "📊 <b>Вопрос 6 · из 15</b>\n"
-            "╍╍╍╍╍╍╍╍╍╍╍╍╍╍\n\n"
-            "💵 <b>Вторая сумма</b>\n\n"
-            "Теперь выберите <b>верхнюю границу</b> вилки (та же сетка сумм).\n"
-            "<i>Итог в заявке: от … до …</i>\n\n"
-            "👇 Снова только кнопка с суммой."
-        ),
         "hr_salary_buttons_only": "⚠️ Выберите сумму <b>только кнопкой</b> под сообщением.",
-        "hr_salary_range_pdf": "от {low} до {high} сум",
+        "hr_salary_single_pdf": "{amount} сум",
         "pdf_reply_title": "Отклик",
         "pdf_photo_caption": "Фотография кандидата",
         "pdf_col_field": "Поле",
@@ -225,25 +216,16 @@ _UI: dict[str, dict[str, str]] = {
             "Keyin savollarga javob berasiz."
         ),
         "hr_use_inline_hint": "👇 Bu savol uchun quyidagi tugmalar orqali tanlang.",
-        "hr_salary_from_ask": (
+        "hr_salary_ask": (
             "📊 <b>6-savol · 15 dan</b>\n"
             "╍╍╍╍╍╍╍╍╍╍╍╍╍╍\n\n"
-            "💵 <b>Maosh diapazoni</b>\n\n"
-            "Avvalo <b>quyi chegarani</b> tanlang (so‘mda).\n"
-            "Tugmalardagi diapazon: <b>2 500 000 dan 5 000 000 gacha</b>.\n\n"
+            "💵 <b>Kutilayotgan maosh</b>\n\n"
+            "Summani tugmalar bilan tanlang: <b>2 500 000 dan 7 000 000 gacha</b> so‘m.\n\n"
             "👇 Faqat tugmalar; erkin matn qabul qilinmaydi.\n"
             "⛔️ To‘xtatish: «To‘xtatish» yoki /cancel"
         ),
-        "hr_salary_to_ask": (
-            "📊 <b>6-savol · 15 dan</b>\n"
-            "╍╍╍╍╍╍╍╍╍╍╍╍╍╍\n\n"
-            "💵 <b>Ikkinchi summa</b>\n\n"
-            "Endi <b>yuqori chegarani</b> tanlang (xuddi shu summalar).\n"
-            "<i>Arizada: … dan … gacha</i>\n\n"
-            "👇 Yana faqat summa tugmasi."
-        ),
         "hr_salary_buttons_only": "⚠️ Summani <b>faqat pastdagi tugmalar</b> orqali tanlang.",
-        "hr_salary_range_pdf": "{low} dan {high} gacha so‘m",
+        "hr_salary_single_pdf": "{amount} so‘m",
         "pdf_reply_title": "Ariza",
         "pdf_photo_caption": "Nomzod surati",
         "pdf_col_field": "Maydon",
