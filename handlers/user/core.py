@@ -39,6 +39,16 @@ from utils.user_locale import ensure_bot_user, get_user_locale, set_user_locale
 
 router = Router(name="user")
 
+# Диапазон зарплаты (вопрос 6) при полной занятости — только эти кнопки reply-клавиатуры.
+HR_SALARY_BUTTON_LABELS: tuple[str, ...] = (
+    "2 500 000",
+    "3 000 000",
+    "3 500 000",
+    "4 000 000",
+    "4 500 000",
+    "5 000 000",
+)
+
 
 class HRCandidateState(StatesGroup):
     waiting_photo = State()
@@ -78,6 +88,47 @@ def _stop_kb(lang: str) -> ReplyKeyboardMarkup:
         resize_keyboard=True,
         one_time_keyboard=True,
     )
+
+
+def _salary_range_kb(lang: str) -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text=HR_SALARY_BUTTON_LABELS[0]),
+                KeyboardButton(text=HR_SALARY_BUTTON_LABELS[1]),
+            ],
+            [
+                KeyboardButton(text=HR_SALARY_BUTTON_LABELS[2]),
+                KeyboardButton(text=HR_SALARY_BUTTON_LABELS[3]),
+            ],
+            [
+                KeyboardButton(text=HR_SALARY_BUTTON_LABELS[4]),
+                KeyboardButton(text=HR_SALARY_BUTTON_LABELS[5]),
+            ],
+            [KeyboardButton(text=msg(lang, "btn_stop_form"), style="danger")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+
+def _parse_salary_label(label: str) -> int | None:
+    digits = "".join(ch for ch in label if ch.isdigit())
+    if not digits:
+        return None
+    try:
+        return int(digits)
+    except ValueError:
+        return None
+
+
+def _format_salary_label(n: int) -> str:
+    s = str(n)
+    parts: list[str] = []
+    while s:
+        parts.append(s[-3:])
+        s = s[:-3]
+    return " ".join(reversed(parts))
 
 
 def _main_kb(lang: str) -> ReplyKeyboardMarkup:
@@ -165,6 +216,9 @@ async def _send_survey_question(message: Message, state: FSMContext) -> None:
     elif item["kind"] == "payment":
         await message.answer(text, reply_markup=_stop_kb(lang))
         await message.answer(msg(lang, "hr_use_inline_hint"), reply_markup=hr_payment_kb(lang))
+    elif step == 6 and data.get("survey_emp_fulltime"):
+        await state.update_data(survey_salary_substep=1, survey_salary_low=None)
+        await message.answer(msg(lang, "hr_salary_from_ask"), reply_markup=_salary_range_kb(lang))
     else:
         await message.answer(text, reply_markup=_stop_kb(lang))
 
@@ -520,6 +574,9 @@ async def cb_hr_agree(query: CallbackQuery, state: FSMContext) -> None:
         candidate_photo_id=None,
         hr_review_pdf_path=None,
         full_name=None,
+        survey_emp_fulltime=False,
+        survey_salary_substep=None,
+        survey_salary_low=None,
     )
     try:
         await query.message.delete()
@@ -562,6 +619,34 @@ async def survey_text(message: Message, state: FSMContext) -> None:
     lang = data.get("ui_lang", LANG_UZ)
     item = SURVEY_ITEMS[step - 1]
     txt = (message.text or "").strip()
+
+    if step == 6 and data.get("survey_emp_fulltime"):
+        if txt not in HR_SALARY_BUTTON_LABELS:
+            await message.answer(msg(lang, "hr_salary_buttons_only"), reply_markup=_salary_range_kb(lang))
+            return
+        sub = data.get("survey_salary_substep") or 1
+        if sub == 1:
+            await state.update_data(survey_salary_low=txt, survey_salary_substep=2)
+            await message.answer(msg(lang, "hr_salary_to_ask"), reply_markup=_salary_range_kb(lang))
+            return
+        low_raw = data.get("survey_salary_low")
+        if not isinstance(low_raw, str):
+            await state.update_data(survey_salary_low=None, survey_salary_substep=1)
+            await message.answer(msg(lang, "hr_salary_from_ask"), reply_markup=_salary_range_kb(lang))
+            return
+        lo_n = _parse_salary_label(low_raw)
+        hi_n = _parse_salary_label(txt)
+        if lo_n is None or hi_n is None:
+            await state.update_data(survey_salary_low=None, survey_salary_substep=1)
+            await message.answer(msg(lang, "hr_salary_from_ask"), reply_markup=_salary_range_kb(lang))
+            return
+        lo_fin, hi_fin = min(lo_n, hi_n), max(lo_n, hi_n)
+        low_fmt = _format_salary_label(lo_fin)
+        high_fmt = _format_salary_label(hi_fin)
+        answer = msg(lang, "hr_salary_range_pdf", low=low_fmt, high=high_fmt)
+        await state.update_data(survey_salary_low=None, survey_salary_substep=None)
+        await _advance_survey(message, state, answer)
+        return
 
     if item["kind"] == "phone":
         if len(txt) < 6:
@@ -613,6 +698,7 @@ async def survey_employment(query: CallbackQuery, state: FSMContext) -> None:
         label = msg(lang, "hr_emp_project")
     else:
         return
+    await state.update_data(survey_emp_fulltime=(value == "full"))
     await _advance_survey(query.message, state, label)
 
 
@@ -635,7 +721,12 @@ async def survey_payment(query: CallbackQuery, state: FSMContext) -> None:
 
 @router.message(HRCandidateState.waiting_survey)
 async def survey_wrong_type(message: Message, state: FSMContext) -> None:
-    lang = (await state.get_data()).get("ui_lang", LANG_UZ)
+    data = await state.get_data()
+    lang = data.get("ui_lang", LANG_UZ)
+    step: int = data.get("survey_step") or 1
+    if step == 6 and data.get("survey_emp_fulltime"):
+        await message.answer(msg(lang, "hr_salary_buttons_only"), reply_markup=_salary_range_kb(lang))
+        return
     await message.answer(msg(lang, "hr_invalid_text"), reply_markup=_stop_kb(lang))
 
 
