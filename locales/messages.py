@@ -70,9 +70,9 @@ _UI: dict[str, dict[str, str]] = {
             "💙 Спасибо за отклик!"
         ),
         "company_info": (
-            "🏢 <b>О компании</b>\n\n"
-            "Мы развиваем digital-проекты и медиа-направления, где ценим системность, "
-            "креатив и быстрый рост сотрудников."
+            "🏢 <b>Кто мы?</b>\n\n"
+            "Привет! Мы команда BMP. Если коротко: мы помогаем бизнесу и блогерам расти.
+Снимаем контент, организуем рекламные кампании с инфлюенсерами и берем на себя весь менеджмент. За нами — понятные процессы, адекватный подход и любовь к тому, что мы делаем. Никакой магии, просто хорошо делаем свою работу."
         ),
         "services_dev": "🛠 Раздел «Услуги» в разработке.",
         "hr_pd_text": (
@@ -202,8 +202,9 @@ _UI: dict[str, dict[str, str]] = {
             "💙 Ariza qoldirganingiz uchun rahmat!"
         ),
         "company_info": (
-            "🏢 <b>Kompaniya haqida</b>\n\n"
-            "Biz digital yo‘nalishda rivojlanayotgan jamoamiz va ijodkor, mas’uliyatli mutaxassislarni qadrlaymiz."
+            "🏢 <b>Biz kimmiz?</b>\n\n"
+            "Salom! Biz BMP jamoasi. Qisqasi, biz biznes va bloggerlarning o'sishiga yordam beramiz.
+Biz kontent yaratamiz, influencer reklama kampaniyalarini tashkil qilamiz va barcha boshqaruvni amalga oshiramiz. Bizda aniq jarayonlar, oqilona yondashuv va qilayotgan ishimizga ishtiyoq bor. Sehr yo'q, shunchaki yaxshi ish."
         ),
         "services_dev": "🛠 «Xizmatlar» bo‘limi ishlab chiqilmoqda.",
         "hr_pd_text": (
