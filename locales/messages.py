@@ -70,9 +70,7 @@ _UI: dict[str, dict[str, str]] = {
             "💙 Спасибо за отклик!"
         ),
         "company_info": (
-            "🏢 <b>Кто мы?</b>\n\n"
-            "Привет! Мы команда BMP. Если коротко: мы помогаем бизнесу и блогерам расти.
-Снимаем контент, организуем рекламные кампании с инфлюенсерами и берем на себя весь менеджмент. За нами — понятные процессы, адекватный подход и любовь к тому, что мы делаем. Никакой магии, просто хорошо делаем свою работу."
+            "🏢 <b>Кто мы?</b>\n\nПривет! Мы команда BMP. Если коротко: мы помогаем бизнесу и блогерам расти.Снимаем контент, организуем рекламные кампании с инфлюенсерами и берем на себя весь менеджмент. За нами — понятные процессы, адекватный подход и любовь к тому, что мы делаем. Никакой магии, просто хорошо делаем свою работу."
         ),
         "services_dev": "🛠 Раздел «Услуги» в разработке.",
         "hr_pd_text": (
@@ -203,8 +201,7 @@ _UI: dict[str, dict[str, str]] = {
         ),
         "company_info": (
             "🏢 <b>Biz kimmiz?</b>\n\n"
-            "Salom! Biz BMP jamoasi. Qisqasi, biz biznes va bloggerlarning o'sishiga yordam beramiz.
-Biz kontent yaratamiz, influencer reklama kampaniyalarini tashkil qilamiz va barcha boshqaruvni amalga oshiramiz. Bizda aniq jarayonlar, oqilona yondashuv va qilayotgan ishimizga ishtiyoq bor. Sehr yo'q, shunchaki yaxshi ish."
+            "Salom! Biz BMP jamoasi. Qisqasi, biz biznes va bloggerlarning o'sishiga yordam beramiz. Biz kontent yaratamiz, influencer reklama kampaniyalarini tashkil qilamiz va barcha boshqaruvni amalga oshiramiz. Bizda aniq jarayonlar, oqilona yondashuv va qilayotgan ishimizga ishtiyoq bor. Sehr yo'q, shunchaki yaxshi ish."
         ),
         "services_dev": "🛠 «Xizmatlar» bo‘limi ishlab chiqilmoqda.",
         "hr_pd_text": (
