@@ -34,7 +34,7 @@ from locales.messages import LANG_UZ, all_labels, main_menu_kb, msg, norm_lang, 
 from models.database import db
 from models.vacancy import Vacancy
 from services.pdf import build_candidate_compact_pdf
-from survey_definitions import SURVEY_ITEMS, survey_ask_html, survey_pdf_label
+from survey_definitions import SURVEY_ITEMS, survey_ask_html, survey_display_step, survey_pdf_label
 from utils.user_locale import ensure_bot_user, get_user_locale, set_user_locale
 
 router = Router(name="user")
@@ -180,7 +180,8 @@ async def _send_survey_question(message: Message, state: FSMContext) -> None:
     if step < 1 or step > len(SURVEY_ITEMS):
         return
     item = SURVEY_ITEMS[step - 1]
-    text = survey_ask_html(item, lang)
+    disp = survey_display_step(step, bool(data.get("survey_emp_fulltime")))
+    text = survey_ask_html(item, lang, disp)
     if item["kind"] == "phone":
         await message.answer(text, reply_markup=_phone_kb(lang))
     elif item["kind"] == "city":

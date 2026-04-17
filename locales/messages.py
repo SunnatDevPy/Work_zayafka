@@ -84,7 +84,7 @@ _UI: dict[str, dict[str, str]] = {
         ),
         "hr_use_inline_hint": "👇 Для этого вопроса выберите вариант кнопкой ниже.",
         "hr_salary_ask": (
-            "📊 <b>Вопрос 6 · из 15</b>\n"
+            "📊 <b>Вопрос 6</b>\n"
             "╍╍╍╍╍╍╍╍╍╍╍╍╍╍\n\n"
             "💵 <b>Ожидаемая зарплата</b>\n\n"
             "Выберите сумму на кнопках: <b>от 2 500 000 до 7 000 000</b> сум.\n\n"
@@ -216,7 +216,7 @@ _UI: dict[str, dict[str, str]] = {
         ),
         "hr_use_inline_hint": "👇 Bu savol uchun quyidagi tugmalar orqali tanlang.",
         "hr_salary_ask": (
-            "📊 <b>6-savol · 15 dan</b>\n"
+            "📊 <b>6-savol</b>\n"
             "╍╍╍╍╍╍╍╍╍╍╍╍╍╍\n\n"
             "💵 <b>Kutilayotgan maosh</b>\n\n"
             "Summani tugmalar bilan tanlang: <b>2 500 000 dan 7 000 000 gacha</b> so‘m.\n\n"
