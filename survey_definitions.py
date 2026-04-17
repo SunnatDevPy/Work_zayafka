@@ -255,7 +255,7 @@ SURVEY_ITEMS: list[SurveyItem] = [
             "⭐ <b>12-savol · 15 dan</b>\n"
             "╍╍╍╍╍╍╍╍╍╍╍╍╍╍\n\n"
             "👥 <b>O‘z mezonlaringiz</b>\n\n"
-            "<b>3 nafar bloger yoki muallif</b> — kontenti kuchli deb bilasiz; qisqacha nima uchun.\n\n"
+            "<b>Qaysi 3 nafar blogerni yoki muallifni</b> — kontenti kuchli deb bilasiz; qisqacha nima uchun.\n\n"
             "✨ Sizning didingiz muhim.\n\n"
             "✏️ Ro‘yxat va izoh ↓"
         ),
