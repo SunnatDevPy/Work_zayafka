@@ -207,7 +207,15 @@ async def _advance_survey(message: Message, state: FSMContext, answer: str) -> N
     if len(answers) != step - 1:
         answers = answers[: max(0, step - 1)]
     answers.append(answer)
+    skip_payment_and_salary = step == 4 and not data.get("survey_emp_fulltime")
+    if skip_payment_and_salary:
+        skip_txt = msg(lang, "hr_survey_skipped_pay_salary")
+        answers.extend([skip_txt, skip_txt])
     await state.update_data(survey_answers=answers)
+    if skip_payment_and_salary:
+        await state.update_data(survey_step=7)
+        await _send_survey_question(message, state)
+        return
     if step >= len(SURVEY_ITEMS):
         await _prepare_hr_review(message, state)
         return
