@@ -209,9 +209,6 @@ async def _advance_survey(message: Message, state: FSMContext, answer: str) -> N
         answers = answers[: max(0, step - 1)]
     answers.append(answer)
     skip_payment_and_salary = step == 4 and not data.get("survey_emp_fulltime")
-    if skip_payment_and_salary:
-        skip_txt = msg(lang, "hr_survey_skipped_pay_salary")
-        answers.extend([skip_txt, skip_txt])
     await state.update_data(survey_answers=answers)
     if skip_payment_and_salary:
         await state.update_data(survey_step=7)
@@ -239,10 +236,23 @@ async def _prepare_hr_review(message: Message, state: FSMContext) -> None:
     applicant_label = f"{full_name or '—'} ({username}) id:{user.id}"
 
     rows: list[tuple[str, str]] = []
-    for i, item in enumerate(SURVEY_ITEMS):
-        label = survey_pdf_label(item, lang)
-        val = answers[i] if i < len(answers) else "—"
-        rows.append((label, val))
+    emp_fulltime = bool(data.get("survey_emp_fulltime"))
+    if emp_fulltime:
+        for i, item in enumerate(SURVEY_ITEMS):
+            label = survey_pdf_label(item, lang)
+            val = answers[i] if i < len(answers) else "—"
+            rows.append((label, val))
+    else:
+        # Вопросы «Формат оплаты» и «Финансовые ожидания» не задаются — строк в PDF нет.
+        skip_item_indices = frozenset({4, 5})
+        ai = 0
+        for i, item in enumerate(SURVEY_ITEMS):
+            if i in skip_item_indices:
+                continue
+            label = survey_pdf_label(item, lang)
+            val = answers[ai] if ai < len(answers) else "—"
+            rows.append((label, val))
+            ai += 1
 
     user_photo_path: str | None = None
     if data.get("candidate_photo_id"):
